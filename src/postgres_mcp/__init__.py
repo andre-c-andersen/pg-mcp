@@ -2,7 +2,6 @@ import asyncio
 import sys
 
 from . import server
-from . import top_queries
 
 
 def main():
@@ -20,5 +19,4 @@ def main():
 __all__ = [
     "main",
     "server",
-    "top_queries",
 ]
