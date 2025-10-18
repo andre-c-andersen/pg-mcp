@@ -1,6 +1,6 @@
 [project]
 name = "pg-mcp"
-version = "0.3.0"
+version = "0.1.0"
 description = "Postgres MCP Lite - A lightweight MCP server for PostgreSQL"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -13,12 +13,12 @@ dependencies = [
     "psycopg-pool>=3.2.6",
     "instructor>=1.7.9",
 ]
-license = "mit"
+license = "MIT"
 license-files = ["LICENSE"]
 
 [[project.authors]]
-name = "Johann Schleier-Smith"
-email = "jssmith@crystal.cloud"
+name = "André C. Andersen"
+email = "andre@gnist.ai"
 
 [build-system]
 requires = [ "hatchling",]
