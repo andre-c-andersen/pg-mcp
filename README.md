@@ -162,6 +162,40 @@ Postgres MCP Lite supports multiple *access modes* to give you control over the 
 To use restricted mode, replace `--access-mode=unrestricted` with `--access-mode=restricted` in the configuration examples above.
 
 
+#### Claude Code Configuration
+
+[Claude Code](https://docs.claude.com/en/docs/claude-code/overview) is Anthropic's agentic coding tool for your terminal. To configure Postgres MCP Lite with Claude Code:
+
+1. **Install Claude Code** (if you haven't already):
+   ```bash
+   npm install -g @anthropic-ai/claude-code
+   ```
+
+2. **Edit your Claude Code configuration file**:
+   - Location: `~/.claude.json` (Linux/macOS) or `%USERPROFILE%\.claude.json` (Windows)
+   - Or use the CLI wizard: `claude mcp add`
+
+3. **Add Postgres MCP Lite to your configuration**:
+
+   ```json
+   {
+     "mcpServers": {
+       "postgres": {
+         "command": "pg-mcp",
+         "args": ["--access-mode=unrestricted"],
+         "env": {
+           "DATABASE_URI": "postgresql://username:password@localhost:5432/dbname"
+         }
+       }
+     }
+   }
+   ```
+
+4. **Restart Claude Code** for changes to take effect. Verify with:
+   ```bash
+   claude mcp list
+   ```
+
 #### Other MCP Clients
 
 Many MCP clients have similar configuration files to Claude Desktop, and you can adapt the examples above to work with the client of your choice.
