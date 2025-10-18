@@ -6,9 +6,6 @@ import os
 import re
 from dataclasses import dataclass
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
@@ -64,13 +61,13 @@ def obfuscate_password(text: str | None) -> str | None:
 class DbConnPool:
     """Database connection manager using psycopg's connection pool."""
 
-    def __init__(self, connection_url: Optional[str] = None):
+    def __init__(self, connection_url: str | None = None):
         self.connection_url = connection_url
         self.pool: AsyncConnectionPool | None = None
         self._is_valid = False
         self._last_error = None
 
-    async def pool_connect(self, connection_url: Optional[str] = None) -> AsyncConnectionPool:
+    async def pool_connect(self, connection_url: str | None = None) -> AsyncConnectionPool:
         """Initialize connection pool with retry logic."""
         # If we already have a valid pool, return it
         if self.pool and self._is_valid:
@@ -133,7 +130,7 @@ class DbConnPool:
         return self._is_valid
 
     @property
-    def last_error(self) -> Optional[str]:
+    def last_error(self) -> str | None:
         """Get the last error message."""
         return self._last_error
 
@@ -142,11 +139,11 @@ class ConnectionRegistry:
     """Registry for managing multiple database connections."""
 
     def __init__(self):
-        self.connections: Dict[str, DbConnPool] = {}
-        self._connection_urls: Dict[str, str] = {}
-        self._connection_descriptions: Dict[str, str] = {}
+        self.connections: dict[str, DbConnPool] = {}
+        self._connection_urls: dict[str, str] = {}
+        self._connection_descriptions: dict[str, str] = {}
 
-    def discover_connections(self) -> Dict[str, str]:
+    def discover_connections(self) -> dict[str, str]:
         """
         Discover all DATABASE_URI_* environment variables.
 
@@ -169,7 +166,7 @@ class ConnectionRegistry:
 
         return discovered
 
-    def discover_descriptions(self) -> Dict[str, str]:
+    def discover_descriptions(self) -> dict[str, str]:
         """
         Discover all DATABASE_DESC_* environment variables.
 
@@ -215,7 +212,7 @@ class ConnectionRegistry:
             self.connections[conn_name] = DbConnPool(url)
 
         # Connect to all databases in parallel
-        async def connect_single(conn_name: str, pool: DbConnPool) -> tuple[str, bool, Optional[str]]:
+        async def connect_single(conn_name: str, pool: DbConnPool) -> tuple[str, bool, str | None]:
             """Connect to a single database and return status."""
             try:
                 await pool.pool_connect()
@@ -282,11 +279,11 @@ class ConnectionRegistry:
         self._connection_urls.clear()
         self._connection_descriptions.clear()
 
-    def get_connection_names(self) -> List[str]:
+    def get_connection_names(self) -> list[str]:
         """Get list of all connection names."""
         return list(self.connections.keys())
 
-    def get_connection_info(self) -> List[Dict[str, str]]:
+    def get_connection_info(self) -> list[dict[str, str]]:
         """
         Get information about all configured connections.
 
@@ -309,7 +306,7 @@ class SqlDriver:
     class RowResult:
         """Simple class to match the Griptape RowResult interface."""
 
-        cells: Dict[str, Any]
+        cells: dict[str, Any]
 
     def __init__(
         self,
@@ -350,7 +347,7 @@ class SqlDriver:
         query: LiteralString,
         params: list[Any] | None = None,
         force_readonly: bool = False,
-    ) -> Optional[List[RowResult]]:
+    ) -> list[RowResult] | None:
         """
         Execute a query and return results.
 
@@ -377,7 +374,7 @@ class SqlDriver:
             # Direct connection approach
             return await self._execute_with_connection(self.conn, query, params, force_readonly=force_readonly)
 
-    async def _execute_with_connection(self, connection, query, params, force_readonly) -> Optional[List[RowResult]]:
+    async def _execute_with_connection(self, connection, query, params, force_readonly) -> list[RowResult] | None:
         """Execute query with the given connection."""
         transaction_started = False
         try:

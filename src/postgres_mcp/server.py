@@ -6,8 +6,6 @@ import os
 import signal
 import sys
 from enum import Enum
-from typing import List
-from typing import Union
 
 import mcp.types as types
 from mcp.server.fastmcp import FastMCP
@@ -22,7 +20,7 @@ from .sql import obfuscate_password
 # Note: Server instructions will be updated after database connections are discovered
 mcp = FastMCP("postgres-mcp")
 
-ResponseType = List[types.TextContent | types.ImageContent | types.EmbeddedResource]
+ResponseType = list[types.TextContent | types.ImageContent | types.EmbeddedResource]
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +38,7 @@ current_access_mode = AccessMode.UNRESTRICTED
 shutdown_in_progress = False
 
 
-async def get_sql_driver(conn_name: str) -> Union[SqlDriver, SafeSqlDriver]:
+async def get_sql_driver(conn_name: str) -> SqlDriver | SafeSqlDriver:
     """
     Get the appropriate SQL driver based on the current access mode.
 
