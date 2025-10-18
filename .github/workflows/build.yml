@@ -12,7 +12,7 @@ on:
       - "**/README.md"
 
 jobs:
-  postgres-mcp-ci:
+  pg-mcp-ci:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,12 +23,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Start Docker service
-        run: sudo service docker start || true
-
-      - name: Verify Docker is running
-        run: docker info
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5

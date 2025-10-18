@@ -7,42 +7,21 @@ import signal
 import sys
 from enum import Enum
 from typing import Any
-from typing import List
-from typing import Literal
-from typing import Union
 
 import mcp.types as types
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
-from pydantic import validate_call
 
-from postgres_mcp.index.dta_calc import DatabaseTuningAdvisor
-
-from .artifacts import ErrorResult
-from .artifacts import ExplainPlanArtifact
-from .database_health import DatabaseHealthTool
-from .database_health import HealthType
-from .explain import ExplainPlanTool
-from .index.index_opt_base import MAX_NUM_INDEX_TUNING_QUERIES
-from .index.llm_opt import LLMOptimizerTool
-from .index.presentation import TextPresentation
-from .sql import ConnectionRegistry
-from .sql import DbConnPool
-from .sql import SafeSqlDriver
-from .sql import SqlDriver
-from .sql import check_hypopg_installation_status
-from .sql import obfuscate_password
-from .top_queries import TopQueriesCalc
+from pg_mcp import ConnectionRegistry
+from pg_mcp import SafeSqlDriver
+from pg_mcp import SqlDriver
+from pg_mcp import obfuscate_password
 
 # Initialize FastMCP with default settings
 # Note: Server instructions will be updated after database connections are discovered
 mcp = FastMCP("postgres-mcp")
 
-# Constants
-PG_STAT_STATEMENTS = "pg_stat_statements"
-HYPOPG_EXTENSION = "hypopg"
-
-ResponseType = List[types.TextContent | types.ImageContent | types.EmbeddedResource]
+ResponseType = list[types.TextContent | types.ImageContent | types.EmbeddedResource]
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +39,7 @@ current_access_mode = AccessMode.UNRESTRICTED
 shutdown_in_progress = False
 
 
-async def get_sql_driver(conn_name: str) -> Union[SqlDriver, SafeSqlDriver]:
+async def get_sql_driver(conn_name: str) -> SqlDriver | SafeSqlDriver:
     """
     Get the appropriate SQL driver based on the current access mode.
 
@@ -325,87 +304,6 @@ async def get_object_details(
         return format_error_response(str(e))
 
 
-@mcp.tool(description="Explains the execution plan for a SQL query, showing how the database will execute it and provides detailed cost estimates.")
-async def explain_query(
-    conn_name: str = Field(description="Connection name (e.g., 'default', 'app', 'etl')"),
-    sql: str = Field(description="SQL query to explain"),
-    analyze: bool = Field(
-        description="When True, actually runs the query to show real execution statistics instead of estimates. "
-        "Takes longer but provides more accurate information.",
-        default=False,
-    ),
-    hypothetical_indexes: list[dict[str, Any]] = Field(
-        description="""A list of hypothetical indexes to simulate. Each index must be a dictionary with these keys:
-    - 'table': The table name to add the index to (e.g., 'users')
-    - 'columns': List of column names to include in the index (e.g., ['email'] or ['last_name', 'first_name'])
-    - 'using': Optional index method (default: 'btree', other options include 'hash', 'gist', etc.)
-
-Examples: [
-    {"table": "users", "columns": ["email"], "using": "btree"},
-    {"table": "orders", "columns": ["user_id", "created_at"]}
-]
-If there is no hypothetical index, you can pass an empty list.""",
-        default=[],
-    ),
-) -> ResponseType:
-    """
-    Explains the execution plan for a SQL query.
-
-    Args:
-        conn_name: Connection name to use
-        sql: The SQL query to explain
-        analyze: When True, actually runs the query for real statistics
-        hypothetical_indexes: Optional list of indexes to simulate
-    """
-    try:
-        sql_driver = await get_sql_driver(conn_name)
-        explain_tool = ExplainPlanTool(sql_driver=sql_driver)
-        result: ExplainPlanArtifact | ErrorResult | None = None
-
-        # If hypothetical indexes are specified, check for HypoPG extension
-        if hypothetical_indexes and len(hypothetical_indexes) > 0:
-            if analyze:
-                return format_error_response("Cannot use analyze and hypothetical indexes together")
-            try:
-                # Use the common utility function to check if hypopg is installed
-                (
-                    is_hypopg_installed,
-                    hypopg_message,
-                ) = await check_hypopg_installation_status(sql_driver)
-
-                # If hypopg is not installed, return the message
-                if not is_hypopg_installed:
-                    return format_text_response(hypopg_message)
-
-                # HypoPG is installed, proceed with explaining with hypothetical indexes
-                result = await explain_tool.explain_with_hypothetical_indexes(sql, hypothetical_indexes)
-            except Exception:
-                raise  # Re-raise the original exception
-        elif analyze:
-            try:
-                # Use EXPLAIN ANALYZE
-                result = await explain_tool.explain_analyze(sql)
-            except Exception:
-                raise  # Re-raise the original exception
-        else:
-            try:
-                # Use basic EXPLAIN
-                result = await explain_tool.explain(sql)
-            except Exception:
-                raise  # Re-raise the original exception
-
-        if result and isinstance(result, ExplainPlanArtifact):
-            return format_text_response(result.to_text())
-        else:
-            error_message = "Error processing explain plan"
-            if isinstance(result, ErrorResult):
-                error_message = result.to_text()
-            return format_error_response(error_message)
-    except Exception as e:
-        logger.error(f"Error explaining query: {e}")
-        return format_error_response(str(e))
-
-
 # Query function declaration without the decorator - we'll add it dynamically based on access mode
 async def execute_sql(
     conn_name: str = Field(description="Connection name (e.g., 'default', 'app', 'etl')"),
@@ -420,118 +318,6 @@ async def execute_sql(
         return format_text_response(list([r.cells for r in rows]))
     except Exception as e:
         logger.error(f"Error executing query: {e}")
-        return format_error_response(str(e))
-
-
-@mcp.tool(description="Analyze frequently executed queries in the database and recommend optimal indexes")
-@validate_call
-async def analyze_workload_indexes(
-    conn_name: str = Field(description="Connection name (e.g., 'default', 'app', 'etl')"),
-    max_index_size_mb: int = Field(description="Max index size in MB", default=10000),
-    method: Literal["dta", "llm"] = Field(description="Method to use for analysis", default="dta"),
-) -> ResponseType:
-    """Analyze frequently executed queries in the database and recommend optimal indexes."""
-    try:
-        sql_driver = await get_sql_driver(conn_name)
-        if method == "dta":
-            index_tuning = DatabaseTuningAdvisor(sql_driver)
-        else:
-            index_tuning = LLMOptimizerTool(sql_driver)
-        dta_tool = TextPresentation(sql_driver, index_tuning)
-        result = await dta_tool.analyze_workload(max_index_size_mb=max_index_size_mb)
-        return format_text_response(result)
-    except Exception as e:
-        logger.error(f"Error analyzing workload: {e}")
-        return format_error_response(str(e))
-
-
-@mcp.tool(description="Analyze a list of (up to 10) SQL queries and recommend optimal indexes")
-@validate_call
-async def analyze_query_indexes(
-    conn_name: str = Field(description="Connection name (e.g., 'default', 'app', 'etl')"),
-    queries: list[str] = Field(description="List of Query strings to analyze"),
-    max_index_size_mb: int = Field(description="Max index size in MB", default=10000),
-    method: Literal["dta", "llm"] = Field(description="Method to use for analysis", default="dta"),
-) -> ResponseType:
-    """Analyze a list of SQL queries and recommend optimal indexes."""
-    if len(queries) == 0:
-        return format_error_response("Please provide a non-empty list of queries to analyze.")
-    if len(queries) > MAX_NUM_INDEX_TUNING_QUERIES:
-        return format_error_response(f"Please provide a list of up to {MAX_NUM_INDEX_TUNING_QUERIES} queries to analyze.")
-
-    try:
-        sql_driver = await get_sql_driver(conn_name)
-        if method == "dta":
-            index_tuning = DatabaseTuningAdvisor(sql_driver)
-        else:
-            index_tuning = LLMOptimizerTool(sql_driver)
-        dta_tool = TextPresentation(sql_driver, index_tuning)
-        result = await dta_tool.analyze_queries(queries=queries, max_index_size_mb=max_index_size_mb)
-        return format_text_response(result)
-    except Exception as e:
-        logger.error(f"Error analyzing queries: {e}")
-        return format_error_response(str(e))
-
-
-@mcp.tool(
-    description="Analyzes database health. Here are the available health checks:\n"
-    "- index - checks for invalid, duplicate, and bloated indexes\n"
-    "- connection - checks the number of connection and their utilization\n"
-    "- vacuum - checks vacuum health for transaction id wraparound\n"
-    "- sequence - checks sequences at risk of exceeding their maximum value\n"
-    "- replication - checks replication health including lag and slots\n"
-    "- buffer - checks for buffer cache hit rates for indexes and tables\n"
-    "- constraint - checks for invalid constraints\n"
-    "- all - runs all checks\n"
-    "You can optionally specify a single health check or a comma-separated list of health checks. The default is 'all' checks."
-)
-async def analyze_db_health(
-    conn_name: str = Field(description="Connection name (e.g., 'default', 'app', 'etl')"),
-    health_type: str = Field(
-        description=f"Optional. Valid values are: {', '.join(sorted([t.value for t in HealthType]))}.",
-        default="all",
-    ),
-) -> ResponseType:
-    """Analyze database health for specified components.
-
-    Args:
-        conn_name: Connection name to use
-        health_type: Comma-separated list of health check types to perform.
-                    Valid values: index, connection, vacuum, sequence, replication, buffer, constraint, all
-    """
-    health_tool = DatabaseHealthTool(await get_sql_driver(conn_name))
-    result = await health_tool.health(health_type=health_type)
-    return format_text_response(result)
-
-
-@mcp.tool(
-    name="get_top_queries",
-    description=f"Reports the slowest or most resource-intensive queries using data from the '{PG_STAT_STATEMENTS}' extension.",
-)
-async def get_top_queries(
-    conn_name: str = Field(description="Connection name (e.g., 'default', 'app', 'etl')"),
-    sort_by: str = Field(
-        description="Ranking criteria: 'total_time' for total execution time or 'mean_time' for mean execution time per call, or 'resources' "
-        "for resource-intensive queries",
-        default="resources",
-    ),
-    limit: int = Field(description="Number of queries to return when ranking based on mean_time or total_time", default=10),
-) -> ResponseType:
-    try:
-        sql_driver = await get_sql_driver(conn_name)
-        top_queries_tool = TopQueriesCalc(sql_driver=sql_driver)
-
-        if sort_by == "resources":
-            result = await top_queries_tool.get_top_resource_queries()
-            return format_text_response(result)
-        elif sort_by == "mean_time" or sort_by == "total_time":
-            # Map the sort_by values to what get_top_queries_by_time expects
-            result = await top_queries_tool.get_top_queries_by_time(limit=limit, sort_by="mean" if sort_by == "mean_time" else "total")
-        else:
-            return format_error_response("Invalid sort criteria. Please use 'resources' or 'mean_time' or 'total_time'.")
-        return format_text_response(result)
-    except Exception as e:
-        logger.error(f"Error getting slow queries: {e}")
         return format_error_response(str(e))
 
 
@@ -602,7 +388,7 @@ async def main():
                     instructions.append(f"- {info['name']}")
 
             # Set the server instructions to include connection information
-            mcp._instructions = "\n".join(instructions)
+            mcp._instructions = "\n".join(instructions)  # type: ignore
             logger.info(f"Updated server context with {len(conn_info)} connection(s)")
     except Exception as e:
         logger.warning(
