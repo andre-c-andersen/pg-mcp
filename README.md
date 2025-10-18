@@ -64,34 +64,13 @@ https://github.com/user-attachments/assets/24e05745-65e9-4998-b877-a368f1eadc13
 
 Before getting started, ensure you have:
 1. Access credentials for your database.
-2. Docker *or* Python 3.12 or higher.
+2. Python 3.12 or higher.
 
 #### Access Credentials
  You can confirm your access credentials are valid by using `psql` or a GUI tool such as [pgAdmin](https://www.pgadmin.org/).
 
 
-#### Docker or Python
-
-The choice to use Docker or Python is yours.
-We generally recommend Docker because Python users can encounter more environment-specific issues.
-However, it often makes sense to use whichever method you are most familiar with.
-
-
 ### Installation
-
-Choose one of the following methods to install Postgres MCP Pro:
-
-#### Option 1: Using Docker
-
-Pull the Postgres MCP Pro MCP server Docker image.
-This image contains all necessary dependencies, providing a reliable way to run Postgres MCP Pro in a variety of environments.
-
-```bash
-docker pull crystaldba/postgres-mcp
-```
-
-
-#### Option 2: Using Python
 
 If you have `pipx` installed you can install Postgres MCP Pro with:
 
@@ -123,36 +102,6 @@ The location of this file depends on your operating system:
 You can also use `Settings` menu item in Claude Desktop to locate the configuration file.
 
 You will now edit the `mcpServers` section of the configuration file.
-
-##### If you are using Docker
-
-```json
-{
-  "mcpServers": {
-    "postgres": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-e",
-        "DATABASE_URI",
-        "crystaldba/postgres-mcp",
-        "--access-mode=unrestricted"
-      ],
-      "env": {
-        "DATABASE_URI": "postgresql://username:password@localhost:5432/dbname"
-      }
-    }
-  }
-}
-```
-
-The Postgres MCP Pro Docker image will automatically remap the hostname `localhost` to work from inside of the container.
-
-- MacOS/Windows: Uses `host.docker.internal` automatically
-- Linux: Uses `172.17.0.1` or the appropriate host address automatically
-
 
 ##### If you are using `pipx`
 
@@ -209,20 +158,8 @@ To configure multiple connections, define additional environment variables with 
 {
   "mcpServers": {
     "postgres": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-e", "DATABASE_URI_APP",
-        "-e", "DATABASE_URI_ETL",
-        "-e", "DATABASE_URI_ANALYTICS",
-        "-e", "DATABASE_DESC_APP",
-        "-e", "DATABASE_DESC_ETL",
-        "-e", "DATABASE_DESC_ANALYTICS",
-        "crystaldba/postgres-mcp",
-        "--access-mode=unrestricted"
-      ],
+      "command": "postgres-mcp",
+      "args": ["--access-mode=unrestricted"],
       "env": {
         "DATABASE_URI_APP": "postgresql://user:pass@localhost:5432/app_db",
         "DATABASE_URI_ETL": "postgresql://user:pass@localhost:5432/etl_db",
@@ -274,15 +211,14 @@ Many MCP clients have similar configuration files to Claude Desktop, and you can
 Postgres MCP Pro supports the [SSE transport](https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse), which allows multiple MCP clients to share one server, possibly a remote server.
 To use the SSE transport, you need to start the server with the `--transport=sse` option.
 
-For example, with Docker run:
+For example, run:
 
 ```bash
-docker run -p 8000:8000 \
-  -e DATABASE_URI=postgresql://username:password@localhost:5432/dbname \
-  crystaldba/postgres-mcp --access-mode=unrestricted --transport=sse
+DATABASE_URI=postgresql://username:password@localhost:5432/dbname \
+  postgres-mcp --access-mode=unrestricted --transport=sse
 ```
 
-Then update your MCP client configuration to call the the MCP server.
+Then update your MCP client configuration to call the MCP server.
 For example, in Cursor's `mcp.json` or Cline's `cline_mcp_settings.json` you can put:
 
 ```json
