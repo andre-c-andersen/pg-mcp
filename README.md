@@ -9,14 +9,6 @@
 
 <h3>A lightweight Postgres MCP server for schema exploration and SQL execution.</h3>
 
-<div class="toc">
-  <a href="#overview">Overview</a> •
-  <a href="#quick-start">Quick Start</a> •
-  <a href="#usage-examples">Usage Examples</a> •
-  <a href="#mcp-server-api">MCP Server API</a> •
-  <a href="#technical-notes">Technical Notes</a>
-</div>
-
 </div>
 
 ## Overview
@@ -28,7 +20,7 @@ This is a stripped-down fork of [postgres-mcp](https://github.com/crystaldba/pos
 - **🗂️ Schema Exploration** - List schemas, tables, views, and get detailed object information including columns, constraints, and indexes.
 - **⚡ SQL Execution** - Execute SQL queries with configurable access control.
 - **🛡️ Safe SQL Execution** - Read-only mode with SQL parsing validation for production environments.
-- **🔌 Multiple Transports** - Supports both [stdio](https://modelcontextprotocol.io/docs/concepts/transports#standard-input%2Foutput-stdio) and [SSE](https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse) transports.
+- **🔌 Multiple [Transports](https://modelcontextprotocol.io/docs/concepts/transports)** - Supports both stdio and SSE.
 
 ## Quick Start
 
