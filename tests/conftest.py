@@ -5,7 +5,7 @@ from collections.abc import Generator
 import pytest
 from dotenv import load_dotenv
 
-from postgres_mcp.sql import reset_postgres_version_cache
+from pg_mcp import reset_postgres_version_cache
 
 load_dotenv()
 

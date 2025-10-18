@@ -1,7 +1,7 @@
 [project]
-name = "postgres-mcp"
+name = "pg-mcp"
 version = "0.3.0"
-description = "PostgreSQL Tuning and Analysis Tool"
+description = "Postgres MCP Lite - A lightweight MCP server for PostgreSQL"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -25,7 +25,7 @@ requires = [ "hatchling",]
 build-backend = "hatchling.build"
 
 [project.scripts]
-postgres-mcp = "postgres_mcp:main"
+pg-mcp = "pg_mcp:main"
 
 # [tool.pyright]
 # venvPath = "."
@@ -74,7 +74,7 @@ convention = "google"
 
 [tool.ruff.lint.isort]
 force-single-line = true
-known-first-party = ["postgres-mcp"]
+known-first-party = ["pg-mcp"]
 
 [tool.pyright]
 typeCheckingMode = "standard"

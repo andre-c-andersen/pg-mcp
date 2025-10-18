@@ -6,15 +6,16 @@ import os
 import signal
 import sys
 from enum import Enum
+from typing import Any
 
 import mcp.types as types
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
-from .sql import ConnectionRegistry
-from .sql import SafeSqlDriver
-from .sql import SqlDriver
-from .sql import obfuscate_password
+from pg_mcp import ConnectionRegistry
+from pg_mcp import SafeSqlDriver
+from pg_mcp import SqlDriver
+from pg_mcp import obfuscate_password
 
 # Initialize FastMCP with default settings
 # Note: Server instructions will be updated after database connections are discovered
@@ -387,7 +388,7 @@ async def main():
                     instructions.append(f"- {info['name']}")
 
             # Set the server instructions to include connection information
-            mcp._instructions = "\n".join(instructions)
+            mcp._instructions = "\n".join(instructions)  # type: ignore
             logger.info(f"Updated server context with {len(conn_info)} connection(s)")
     except Exception as e:
         logger.warning(
