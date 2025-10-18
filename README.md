@@ -12,7 +12,8 @@
 <div class="toc">
   <a href="#overview">Overview</a> •
   <a href="#quick-start">Quick Start</a> •
-  <a href="#mcp-server-api">MCP API</a> •
+  <a href="#usage-examples">Usage Examples</a> •
+  <a href="#mcp-server-api">MCP Server API</a> •
   <a href="#technical-notes">Technical Notes</a>
 </div>
 
