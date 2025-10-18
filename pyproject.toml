@@ -1,6 +1,6 @@
 [project]
 name = "pg-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Postgres MCP Lite - A lightweight MCP server for PostgreSQL"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -13,12 +13,27 @@ dependencies = [
     "psycopg-pool>=3.2.6",
     "instructor>=1.7.9",
 ]
-license = "MIT"
-license-files = ["LICENSE"]
+license = {text = "MIT"}
+keywords = ["mcp", "postgres", "postgresql", "database", "ai", "llm", "model-context-protocol"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Database",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 
 [[project.authors]]
 name = "André C. Andersen"
 email = "andre@gnist.ai"
+
+[project.urls]
+Homepage = "https://github.com/andre-c-andersen/pg-mcp"
+Repository = "https://github.com/andre-c-andersen/pg-mcp"
+Issues = "https://github.com/andre-c-andersen/pg-mcp/issues"
+"Original Project" = "https://github.com/crystaldba/postgres-mcp"
 
 [build-system]
 requires = [ "hatchling",]
