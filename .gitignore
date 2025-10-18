@@ -185,3 +185,5 @@ devenv.local.nix
 *.sql
 
 .idea/
+
+.claude/settings.local.json
