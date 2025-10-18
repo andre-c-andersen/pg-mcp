@@ -4,9 +4,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![PyPI - Version](https://img.shields.io/pypi/v/pg-mcp)](https://pypi.org/project/pg-mcp/)
-[![Discord](https://img.shields.io/discord/1336769798603931789?label=Discord)](https://discord.gg/4BEHC7ZM)
-[![Twitter Follow](https://img.shields.io/twitter/follow/auto_dba?style=flat)](https://x.com/auto_dba)
-[![Contributors](https://img.shields.io/github/contributors/crystaldba/pg-mcp)](https://github.com/crystaldba/pg-mcp/graphs/contributors)
+[![Twitter Follow](https://img.shields.io/twitter/follow/AndreCAndersen?style=flat)](https://x.com/AndreCAndersen)
+[![Contributors](https://img.shields.io/github/contributors/andre-c-andersen/pg-mcp)](https://github.com/andre-c-andersen/pg-mcp/graphs/contributors)
 
 <h3>A lightweight Postgres MCP server for schema exploration and SQL execution.</h3>
 
@@ -23,7 +22,7 @@
 
 **Postgres MCP Lite** is a lightweight, open-source Model Context Protocol (MCP) server for PostgreSQL. It provides AI assistants with essential database access: schema exploration and SQL execution.
 
-This is a stripped-down version focused on core functionality:
+This is a stripped-down fork of [postgres-mcp](https://github.com/crystaldba/postgres-mcp) by [Crystal DBA](https://www.linkedin.com/company/crystaldba/), focused on core functionality:
 
 - **🗂️ Schema Exploration** - List schemas, tables, views, and get detailed object information including columns, constraints, and indexes.
 - **⚡ SQL Execution** - Execute SQL queries with configurable access control.
@@ -301,7 +300,7 @@ The instructions below are for developers who want to work on Postgres MCP Lite,
 2. **Clone the repository**:
 
    ```bash
-   git clone https://github.com/crystaldba/pg-mcp.git
+   git clone https://github.com/andre-c-andersen/pg-mcp.git
    cd pg-mcp
    ```
 
