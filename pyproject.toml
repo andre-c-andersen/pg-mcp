@@ -1,7 +1,7 @@
 [project]
 name = "pg-mcp"
-version = "0.1.8"
-description = "Postgres MCP Lite - A lightweight MCP server for PostgreSQL"
+version = "0.2.0"
+description = "A lightweight, read-only-by-default PostgreSQL MCP server for data analysts and ETL developers"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -10,7 +10,6 @@ dependencies = [
     "humanize>=4.8.0",
     "pglast==7.2.0",
     "attrs>=25.3.0",
-    "psycopg-pool>=3.2.6",
     "instructor>=1.7.9",
 ]
 license = {text = "MIT"}

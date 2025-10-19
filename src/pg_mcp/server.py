@@ -1,9 +1,7 @@
 # ruff: noqa: B008
 import argparse
-import asyncio
 import logging
 import os
-import platform
 import signal
 import sys
 from enum import Enum
@@ -17,12 +15,6 @@ from pg_mcp import ConnectionRegistry
 from pg_mcp import SafeSqlDriver
 from pg_mcp import SqlDriver
 from pg_mcp import obfuscate_password
-
-# Fix for Windows: psycopg3 requires SelectorEventLoop on Windows
-# This MUST be set before any async operations occur
-if platform.system() == "Windows":
-    # WindowsSelectorEventLoopPolicy is only available on Windows
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # type: ignore[attr-defined]
 
 
 def setup_logging(transport: str = "stdio") -> None:
@@ -91,7 +83,7 @@ current_access_mode = AccessMode.UNRESTRICTED
 shutdown_in_progress = False
 
 
-async def get_sql_driver(conn_name: str) -> SqlDriver | SafeSqlDriver:
+def get_sql_driver(conn_name: str) -> SqlDriver | SafeSqlDriver:
     """
     Get the appropriate SQL driver based on the current access mode.
 
@@ -126,13 +118,13 @@ def format_error_response(error: str) -> ResponseType:
 
 
 @mcp.tool(description="List all schemas in the database")
-async def list_schemas(
+def list_schemas(
     conn_name: str = Field(description="Connection name - see server instructions for available connections"),
 ) -> ResponseType:
     """List all schemas in the database."""
     try:
-        sql_driver = await get_sql_driver(conn_name)
-        rows = await sql_driver.execute_query(
+        sql_driver = get_sql_driver(conn_name)
+        rows = sql_driver.execute_query(
             """
             SELECT
                 schema_name,
@@ -154,18 +146,18 @@ async def list_schemas(
 
 
 @mcp.tool(description="List objects in a schema")
-async def list_objects(
+def list_objects(
     conn_name: str = Field(description="Connection name - see server instructions for available connections"),
     schema_name: str = Field(description="Schema name"),
     object_type: str = Field(description="Object type: 'table', 'view', 'sequence', or 'extension'", default="table"),
 ) -> ResponseType:
     """List objects of a given type in a schema."""
     try:
-        sql_driver = await get_sql_driver(conn_name)
+        sql_driver = get_sql_driver(conn_name)
 
         if object_type in ("table", "view"):
             table_type = "BASE TABLE" if object_type == "table" else "VIEW"
-            rows = await SafeSqlDriver.execute_param_query(
+            rows = SafeSqlDriver.execute_param_query(
                 sql_driver,
                 """
                 SELECT table_schema, table_name, table_type
@@ -182,7 +174,7 @@ async def list_objects(
             )
 
         elif object_type == "sequence":
-            rows = await SafeSqlDriver.execute_param_query(
+            rows = SafeSqlDriver.execute_param_query(
                 sql_driver,
                 """
                 SELECT sequence_schema, sequence_name, data_type
@@ -200,7 +192,7 @@ async def list_objects(
 
         elif object_type == "extension":
             # Extensions are not schema-specific
-            rows = await sql_driver.execute_query(
+            rows = sql_driver.execute_query(
                 """
                 SELECT extname, extversion, extrelocatable
                 FROM pg_extension
@@ -223,7 +215,7 @@ async def list_objects(
 
 
 @mcp.tool(description="Show detailed information about a database object")
-async def get_object_details(
+def get_object_details(
     conn_name: str = Field(description="Connection name - see server instructions for available connections"),
     schema_name: str = Field(description="Schema name"),
     object_name: str = Field(description="Object name"),
@@ -231,11 +223,11 @@ async def get_object_details(
 ) -> ResponseType:
     """Get detailed information about a database object."""
     try:
-        sql_driver = await get_sql_driver(conn_name)
+        sql_driver = get_sql_driver(conn_name)
 
         if object_type in ("table", "view"):
             # Get columns
-            col_rows = await SafeSqlDriver.execute_param_query(
+            col_rows = SafeSqlDriver.execute_param_query(
                 sql_driver,
                 """
                 SELECT column_name, data_type, is_nullable, column_default
@@ -260,7 +252,7 @@ async def get_object_details(
             )
 
             # Get constraints
-            con_rows = await SafeSqlDriver.execute_param_query(
+            con_rows = SafeSqlDriver.execute_param_query(
                 sql_driver,
                 """
                 SELECT tc.constraint_name, tc.constraint_type, kcu.column_name
@@ -288,7 +280,7 @@ async def get_object_details(
             constraints_list = [{"name": name, **data} for name, data in constraints.items()]
 
             # Get indexes
-            idx_rows = await SafeSqlDriver.execute_param_query(
+            idx_rows = SafeSqlDriver.execute_param_query(
                 sql_driver,
                 """
                 SELECT indexname, indexdef
@@ -308,7 +300,7 @@ async def get_object_details(
             }
 
         elif object_type == "sequence":
-            rows = await SafeSqlDriver.execute_param_query(
+            rows = SafeSqlDriver.execute_param_query(
                 sql_driver,
                 """
                 SELECT sequence_schema, sequence_name, data_type, start_value, increment
@@ -331,7 +323,7 @@ async def get_object_details(
                 result = {}
 
         elif object_type == "extension":
-            rows = await SafeSqlDriver.execute_param_query(
+            rows = SafeSqlDriver.execute_param_query(
                 sql_driver,
                 """
                 SELECT extname, extversion, extrelocatable
@@ -357,14 +349,14 @@ async def get_object_details(
 
 
 # Query function declaration without the decorator - we'll add it dynamically based on access mode
-async def execute_sql(
+def execute_sql(
     conn_name: str = Field(description="Connection name - see server instructions for available connections"),
     sql: str = Field(description="SQL to run", default="all"),
 ) -> ResponseType:
     """Executes a SQL query against the database."""
     try:
-        sql_driver = await get_sql_driver(conn_name)
-        rows = await sql_driver.execute_query(sql)  # type: ignore
+        sql_driver = get_sql_driver(conn_name)
+        rows = sql_driver.execute_query(sql)  # type: ignore
         if rows is None:
             return format_text_response("No results")
         return format_text_response(list([r.cells for r in rows]))
@@ -373,7 +365,7 @@ async def execute_sql(
         return format_error_response(str(e))
 
 
-async def main():
+def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="PostgreSQL MCP Server")
     parser.add_argument("database_url", help="Database connection URL", nargs="?")
@@ -381,8 +373,8 @@ async def main():
         "--access-mode",
         type=str,
         choices=[mode.value for mode in AccessMode],
-        default=AccessMode.UNRESTRICTED.value,
-        help="Set SQL access mode: unrestricted (unrestricted) or restricted (read-only with protections)",
+        default=AccessMode.RESTRICTED.value,
+        help="Set SQL access mode: restricted (read-only, default) or unrestricted (full access)",
     )
     parser.add_argument(
         "--transport",
@@ -429,7 +421,7 @@ async def main():
         logger.info("Using command-line database URL as DATABASE_URI")
 
     try:
-        await connection_registry.discover_and_connect()
+        connection_registry.discover_and_connect()
         conn_names = connection_registry.get_connection_names()
         logger.info(f"Successfully initialized {len(conn_names)} connection(s): {', '.join(conn_names)}")
 
@@ -454,28 +446,26 @@ async def main():
             "The MCP server will start but database operations will fail until valid connections are established.",
         )
 
-    # Set up proper shutdown handling
+    # Set up proper shutdown handling for Unix-like systems
     try:
-        loop = asyncio.get_running_loop()
         signals = (signal.SIGTERM, signal.SIGINT)
         for s in signals:
-            loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown(s)))
-    except NotImplementedError:
-        # Windows doesn't support signals properly
-        logger.warning("Signal handling not supported on Windows")
-        pass
+            signal.signal(s, lambda sig, frame: shutdown(sig))
+    except (AttributeError, ValueError):
+        # Windows or signals not available
+        logger.warning("Signal handling not fully supported on this platform")
 
-    # Run the server with the selected transport (always async)
+    # Run the server with the selected transport
     if args.transport == "stdio":
-        await mcp.run_stdio_async()
+        mcp.run()
     else:
         # Update FastMCP settings based on command line arguments
         mcp.settings.host = args.sse_host
         mcp.settings.port = args.sse_port
-        await mcp.run_sse_async()
+        mcp.run()
 
 
-async def shutdown(sig=None):
+def shutdown(sig=None):
     """Clean shutdown of the server."""
     global shutdown_in_progress
 
@@ -487,11 +477,11 @@ async def shutdown(sig=None):
     shutdown_in_progress = True
 
     if sig:
-        logger.info(f"Received exit signal {sig.name}")
+        logger.info(f"Received exit signal {sig}")
 
     # Close all database connections
     try:
-        await connection_registry.close_all()
+        connection_registry.close_all()
         logger.info("Closed all database connections")
     except Exception as e:
         logger.error(f"Error closing database connections: {e}")
@@ -502,4 +492,4 @@ async def shutdown(sig=None):
 
 def run():
     """Entry point for the CLI command."""
-    asyncio.run(main())
+    main()

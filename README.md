@@ -7,20 +7,27 @@
 [![Twitter Follow](https://img.shields.io/twitter/follow/AndreCAndersen?style=flat)](https://x.com/AndreCAndersen)
 [![Contributors](https://img.shields.io/github/contributors/andre-c-andersen/pg-mcp)](https://github.com/andre-c-andersen/pg-mcp/graphs/contributors)
 
-<h3>A lightweight Postgres MCP server for schema exploration and SQL execution.</h3>
+<h3>A lightweight, read-only-by-default Postgres MCP server for data analysts and ETL developers.</h3>
 
 </div>
 
 ## Overview
 
-**Postgres MCP Lite** is a lightweight, open-source Model Context Protocol (MCP) server for PostgreSQL. It provides AI assistants with essential database access: schema exploration and SQL execution.
+**Postgres MCP Lite** is a lightweight, open-source Model Context Protocol (MCP) server for PostgreSQL, designed specifically for **data analysts and ETL developers** who need to explore and understand database schemas and data.
 
-This is a stripped-down fork of [postgres-mcp](https://github.com/crystaldba/postgres-mcp) by [Crystal DBA](https://www.linkedin.com/company/crystaldba/), focused on core functionality:
+This is a streamlined fork of [postgres-mcp](https://github.com/crystaldba/postgres-mcp) by [Crystal DBA](https://www.linkedin.com/company/crystaldba/), focused on **safe data exploration** rather than database administration:
 
-- **🗂️ Schema Exploration** - List schemas, tables, views, and get detailed object information including columns, constraints, and indexes.
-- **⚡ SQL Execution** - Execute SQL queries with configurable access control.
-- **🛡️ Safe SQL Execution** - Read-only mode with SQL parsing validation for production environments.
-- **🔌 Multiple [Transports](https://modelcontextprotocol.io/docs/concepts/transports)** - Supports both stdio and SSE.
+- **🔍 Data Exploration** - Understand database schemas, table structures, and relationships with AI assistance
+- **📊 Query Analysis** - Generate and execute SQL queries to analyze data patterns and relationships
+- **🛡️ Read-Only by Default** - Defaults to restricted mode with SQL validation, preventing accidental modifications
+- **🔌 Multiple [Transports](https://modelcontextprotocol.io/docs/concepts/transports)** - Supports both stdio and SSE
+- **🌐 Multi-Database Support** - Connect to multiple databases simultaneously (app, ETL, analytics, etc.)
+
+**Perfect for:**
+- 📈 Data analysts exploring production databases safely
+- 🔄 ETL developers understanding source and target schemas
+- 🤖 AI-assisted data discovery and documentation
+- 📝 Generating data analysis queries with LLM help
 
 ## Quick Start
 
@@ -74,9 +81,6 @@ You will now edit the `mcpServers` section of the configuration file.
   "mcpServers": {
     "postgres": {
       "command": "pg-mcp",
-      "args": [
-        "--access-mode=unrestricted"
-      ],
       "env": {
         "DATABASE_URI": "postgresql://username:password@localhost:5432/dbname"
       }
@@ -123,7 +127,6 @@ To configure multiple connections, define additional environment variables with 
   "mcpServers": {
     "postgres": {
       "command": "pg-mcp",
-      "args": ["--access-mode=unrestricted"],
       "env": {
         "DATABASE_URI_APP": "postgresql://user:pass@localhost:5432/app_db",
         "DATABASE_URI_ETL": "postgresql://user:pass@localhost:5432/etl_db",
@@ -155,11 +158,18 @@ For backward compatibility, `DATABASE_URI` (without a suffix) maps to the connec
 
 ##### Access Mode
 
-Postgres MCP Lite supports multiple *access modes* to give you control over the operations that the AI agent can perform on the database:
-- **Unrestricted Mode**: Allows full read/write access to modify data and schema. It is suitable for development environments.
-- **Restricted Mode**: Limits operations to read-only transactions and imposes constraints on resource utilization (presently only execution time). It is suitable for production environments.
+**Restricted mode (read-only) is the default.** You can query and explore schemas safely—writes and DDL are blocked.
 
-To use restricted mode, replace `--access-mode=unrestricted` with `--access-mode=restricted` in the configuration examples above.
+**Allowed:** SELECT, EXPLAIN, SHOW, ANALYZE, schema introspection
+**Blocked:** INSERT, UPDATE, DELETE, CREATE, ALTER, DROP
+
+**💡 Best Practice:** Use database credentials with read-only permissions. Software makes mistakes—limit what an AI agent can access, just like you would for any automated process.
+
+**⚠️ Data Privacy:** Database content will be sent to your LLM provider. Only connect to databases containing data you have the right to share. Consider data protection regulations (GDPR, HIPAA, etc.) and your organization's policies before use.
+
+**⚠️ Unrestricted Mode (Dangerous)**
+
+Only connect to databases you're willing to destroy. Allows full write access and DDL. Add `--access-mode=unrestricted` to the args array as shown in the `uv` example above.
 
 
 ##### Logging Configuration
@@ -182,7 +192,6 @@ Example configuration with logging disabled:
   "mcpServers": {
     "postgres": {
       "command": "pg-mcp",
-      "args": ["--access-mode=unrestricted"],
       "env": {
         "DATABASE_URI": "postgresql://username:password@localhost:5432/dbname",
         "LOG_LEVEL": "NONE"
@@ -213,7 +222,6 @@ Example configuration with logging disabled:
      "mcpServers": {
        "postgres": {
          "command": "pg-mcp",
-         "args": ["--access-mode=unrestricted"],
          "env": {
            "DATABASE_URI": "postgresql://username:password@localhost:5432/dbname"
          }
@@ -244,7 +252,7 @@ For example, run:
 
 ```bash
 DATABASE_URI=postgresql://username:password@localhost:5432/dbname \
-  pg-mcp --access-mode=unrestricted --transport=sse
+  pg-mcp --transport=sse
 ```
 
 Then update your MCP client configuration to call the MCP server.
@@ -327,16 +335,16 @@ Postgres MCP Lite provides 4 essential tools:
 
 ### Postgres Client Library
 
-Postgres MCP Lite uses [psycopg3](https://www.psycopg.org/) for asynchronous database connectivity. It leverages [libpq](https://www.postgresql.org/docs/current/libpq.html) for full Postgres feature support.
+Postgres MCP Lite uses [psycopg3](https://www.psycopg.org/) in **synchronous mode** for reliable database connectivity. It leverages [libpq](https://www.postgresql.org/docs/current/libpq.html) for full Postgres feature support.
 
-### Protected SQL Execution
+### Safe SQL Execution by Default
 
-Postgres MCP Lite provides two access modes:
+Postgres MCP Lite **defaults to restricted mode** for safe data exploration:
 
-- **Unrestricted Mode**: Full read/write access, suitable for development environments
-- **Restricted Mode**: Read-only transactions with execution time limits, suitable for production
+- **Restricted Mode (Default)**: Read-only transactions with SQL validation and execution time limits. Perfect for production databases.
+- **Unrestricted Mode**: Full read/write access for development or when explicitly needed.
 
-In restricted mode, SQL is parsed using [pglast](https://pglast.readthedocs.io/) to prevent transaction control statements that could circumvent read-only protections. All queries execute within read-only transactions and are automatically rolled back.
+In restricted mode, SQL is parsed using [pglast](https://pglast.readthedocs.io/) to validate that only safe, read-only operations are allowed (SELECT, EXPLAIN, SHOW, ANALYZE, VACUUM). All queries execute within read-only transactions and are automatically rolled back, preventing accidental data modifications.
 
 ### Schema Information
 
