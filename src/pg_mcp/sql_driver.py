@@ -8,8 +8,8 @@ from typing import Any
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
+import psycopg
 from psycopg.rows import dict_row
-from psycopg_pool import ConnectionPool
 from typing_extensions import LiteralString
 
 logger = logging.getLogger(__name__)
@@ -58,74 +58,43 @@ def obfuscate_password(text: str | None) -> str | None:
 
 
 class DbConnPool:
-    """Database connection manager using psycopg's connection pool."""
+    """Database connection manager that validates and stores connection URLs."""
 
     def __init__(self, connection_url: str | None = None):
         self.connection_url = connection_url
-        self.pool: ConnectionPool | None = None
         self._is_valid = False
         self._last_error = None
 
-    def pool_connect(self, connection_url: str | None = None) -> ConnectionPool:
-        """Initialize connection pool with retry logic."""
-        # If we already have a valid pool, return it
-        if self.pool and self._is_valid:
-            return self.pool
-
+    def test_connection(self, connection_url: str | None = None) -> None:
+        """Test that the connection URL is valid by attempting to connect."""
         url = connection_url or self.connection_url
         self.connection_url = url
+
         if not url:
             self._is_valid = False
             self._last_error = "Database connection URL not provided"
             raise ValueError(self._last_error)
 
-        # Close any existing pool before creating a new one
-        self.close()
-
         try:
-            # Configure connection pool with appropriate settings
-            self.pool = ConnectionPool(
-                conninfo=url,
-                min_size=1,
-                max_size=5,
-                open=False,  # Don't connect immediately, let's do it explicitly
-            )
-
-            # Open the pool explicitly
-            self.pool.open()
-
-            # Test the connection pool by executing a simple query
-            with self.pool.connection() as conn:
+            # Test connection by opening, executing a simple query, and closing
+            with psycopg.connect(url, autocommit=False) as conn:
                 with conn.cursor() as cursor:
                     cursor.execute("SELECT 1")
 
             self._is_valid = True
             self._last_error = None
-            return self.pool
         except Exception as e:
             self._is_valid = False
             self._last_error = str(e)
-
-            # Clean up failed pool
-            self.close()
-
             raise ValueError(f"Connection attempt failed: {obfuscate_password(str(e))}") from e
 
     def close(self) -> None:
-        """Close the connection pool."""
-        if self.pool:
-            try:
-                # Close the pool
-                self.pool.close()
-            except Exception as e:
-                logger.warning(f"Error closing connection pool: {e}")
-            finally:
-                self.pool = None
-                self._is_valid = False
+        """No-op for compatibility. Connections are per-request, nothing to close."""
+        pass
 
     @property
     def is_valid(self) -> bool:
-        """Check if the connection pool is valid."""
+        """Check if the connection URL is valid."""
         return self._is_valid
 
     @property
@@ -190,7 +159,7 @@ class ConnectionRegistry:
 
     def discover_and_connect(self) -> None:
         """
-        Discover all DATABASE_URI_* environment variables and connect to them.
+        Discover all DATABASE_URI_* environment variables and test connections.
         """
         discovered = self.discover_connections()
 
@@ -203,14 +172,14 @@ class ConnectionRegistry:
         self._connection_urls = discovered.copy()
         self._connection_descriptions = self.discover_descriptions()
 
-        # Create connection pools and connect to each database
+        # Create connection managers and test each database URL
         for conn_name, url in discovered.items():
-            pool = DbConnPool(url)
-            self.connections[conn_name] = pool
+            conn_mgr = DbConnPool(url)
+            self.connections[conn_name] = conn_mgr
 
             try:
-                pool.pool_connect()
-                logger.info(f"Successfully connected to '{conn_name}'")
+                conn_mgr.test_connection()
+                logger.info(f"Successfully tested connection to '{conn_name}'")
             except Exception as e:
                 error_msg = obfuscate_password(str(e))
                 logger.warning(f"Failed to connect to '{conn_name}': {error_msg}")
@@ -325,7 +294,7 @@ class SqlDriver:
         force_readonly: bool = False,
     ) -> list[RowResult] | None:
         """
-        Execute a query and return results.
+        Execute a query and return results using a fresh connection per request.
 
         Args:
             query: SQL query to execute
@@ -340,21 +309,24 @@ class SqlDriver:
             if self.conn is None:
                 raise ValueError("Connection not established")
 
-        # Handle connection pool vs direct connection
-        if self.is_pool:
-            # For pools, get a connection from the pool
-            pool = self.conn.pool_connect()
-            with pool.connection() as connection:
-                return self._execute_with_connection(connection, query, params, force_readonly=force_readonly)
-        else:
-            # Direct connection approach
-            return self._execute_with_connection(self.conn, query, params, force_readonly=force_readonly)
+        # Get the connection URL from the DbConnPool
+        if not self.is_pool:
+            raise ValueError("SqlDriver must be initialized with a DbConnPool instance")
+
+        connection_url = self.conn.connection_url
+        if not connection_url:
+            raise ValueError("Connection URL not available")
+
+        # Open a fresh connection for this request
+        # Note: dict_row is the correct factory but pyright doesn't recognize the type compatibility
+        with psycopg.connect(connection_url, autocommit=False, row_factory=dict_row) as connection:  # type: ignore[arg-type]
+            return self._execute_with_connection(connection, query, params, force_readonly=force_readonly)
 
     def _execute_with_connection(self, connection, query, params, force_readonly) -> list[RowResult] | None:
         """Execute query with the given connection."""
         transaction_started = False
         try:
-            with connection.cursor(row_factory=dict_row) as cursor:
+            with connection.cursor() as cursor:
                 # Start read-only transaction
                 if force_readonly:
                     cursor.execute("BEGIN TRANSACTION READ ONLY")
