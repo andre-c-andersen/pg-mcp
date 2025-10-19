@@ -120,7 +120,7 @@ def format_error_response(error: str) -> ResponseType:
 
 @mcp.tool(description="List all schemas in the database")
 async def list_schemas(
-    conn_name: str = Field(description="Connection name (e.g., 'default', 'app', 'etl')"),
+    conn_name: str = Field(description="Connection name - see server instructions for available connections"),
 ) -> ResponseType:
     """List all schemas in the database."""
     try:
@@ -148,7 +148,7 @@ async def list_schemas(
 
 @mcp.tool(description="List objects in a schema")
 async def list_objects(
-    conn_name: str = Field(description="Connection name (e.g., 'default', 'app', 'etl')"),
+    conn_name: str = Field(description="Connection name - see server instructions for available connections"),
     schema_name: str = Field(description="Schema name"),
     object_type: str = Field(description="Object type: 'table', 'view', 'sequence', or 'extension'", default="table"),
 ) -> ResponseType:
@@ -217,7 +217,7 @@ async def list_objects(
 
 @mcp.tool(description="Show detailed information about a database object")
 async def get_object_details(
-    conn_name: str = Field(description="Connection name (e.g., 'default', 'app', 'etl')"),
+    conn_name: str = Field(description="Connection name - see server instructions for available connections"),
     schema_name: str = Field(description="Schema name"),
     object_name: str = Field(description="Object name"),
     object_type: str = Field(description="Object type: 'table', 'view', 'sequence', or 'extension'", default="table"),
@@ -351,7 +351,7 @@ async def get_object_details(
 
 # Query function declaration without the decorator - we'll add it dynamically based on access mode
 async def execute_sql(
-    conn_name: str = Field(description="Connection name (e.g., 'default', 'app', 'etl')"),
+    conn_name: str = Field(description="Connection name - see server instructions for available connections"),
     sql: str = Field(description="SQL to run", default="all"),
 ) -> ResponseType:
     """Executes a SQL query against the database."""
