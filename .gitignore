@@ -187,3 +187,5 @@ devenv.local.nix
 .idea/
 
 .claude/settings.local.json
+
+.mcp.json
