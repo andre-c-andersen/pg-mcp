@@ -17,6 +17,51 @@ from pg_mcp import SafeSqlDriver
 from pg_mcp import SqlDriver
 from pg_mcp import obfuscate_password
 
+
+def setup_logging(transport: str = "stdio") -> None:
+    """
+    Configure logging based on transport type and LOG_LEVEL environment variable.
+
+    For stdio transport, logs go to stderr to avoid interfering with MCP protocol on stdout.
+    For SSE transport, logs can go to stdout.
+
+    LOG_LEVEL environment variable controls verbosity:
+    - DEBUG: Show all logs including debug messages
+    - INFO: Show info, warning, and error messages (default)
+    - WARNING: Show only warnings and errors
+    - ERROR: Show only errors
+    - CRITICAL: Show only critical errors
+    - NONE: Disable all logging
+    """
+    log_level_str = os.environ.get("LOG_LEVEL", "INFO").upper()
+
+    # Handle special case: disable logging
+    if log_level_str == "NONE":
+        logging.disable(logging.CRITICAL)
+        return
+
+    # Map string to logging level
+    level_map = {
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
+        "CRITICAL": logging.CRITICAL,
+    }
+    log_level = level_map.get(log_level_str, logging.INFO)
+
+    # For stdio transport, ALWAYS use stderr to avoid breaking MCP protocol
+    # For SSE transport, stdout is fine since MCP uses HTTP
+    stream = sys.stderr if transport == "stdio" else sys.stdout
+
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        stream=stream,
+        force=True,  # Override any existing configuration
+    )
+
+
 # Initialize FastMCP with default settings
 # Note: Server instructions will be updated after database connections are discovered
 mcp = FastMCP("postgres-mcp")
@@ -353,6 +398,10 @@ async def main():
     )
 
     args = parser.parse_args()
+
+    # Setup logging BEFORE any log statements are made
+    # For stdio transport, logs go to stderr to avoid interfering with MCP protocol
+    setup_logging(transport=args.transport)
 
     # Store the access mode in the global variable
     global current_access_mode

@@ -162,6 +162,37 @@ Postgres MCP Lite supports multiple *access modes* to give you control over the 
 To use restricted mode, replace `--access-mode=unrestricted` with `--access-mode=restricted` in the configuration examples above.
 
 
+##### Logging Configuration
+
+When using stdio transport (the default), Postgres MCP Lite writes logs to stderr to avoid interfering with the MCP protocol (which uses stdout). When using SSE transport, logs go to stdout.
+
+You can control the logging verbosity using the `LOG_LEVEL` environment variable:
+
+- `DEBUG` - Show all logs including debug messages
+- `INFO` - Show info, warning, and error messages (default)
+- `WARNING` - Show only warnings and errors
+- `ERROR` - Show only errors
+- `CRITICAL` - Show only critical errors
+- `NONE` - Disable all logging
+
+Example configuration with logging disabled:
+
+```json
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "pg-mcp",
+      "args": ["--access-mode=unrestricted"],
+      "env": {
+        "DATABASE_URI": "postgresql://username:password@localhost:5432/dbname",
+        "LOG_LEVEL": "NONE"
+      }
+    }
+  }
+}
+```
+
+
 #### Claude Code Configuration
 
 [Claude Code](https://docs.claude.com/en/docs/claude-code/overview) is Anthropic's agentic coding tool for your terminal. To configure Postgres MCP Lite with Claude Code:
