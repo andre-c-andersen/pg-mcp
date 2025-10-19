@@ -3,6 +3,7 @@ import argparse
 import asyncio
 import logging
 import os
+import platform
 import signal
 import sys
 from enum import Enum
@@ -495,4 +496,8 @@ async def shutdown(sig=None):
 
 def run():
     """Entry point for the CLI command."""
+    # Fix for Windows: psycopg3 requires SelectorEventLoop on Windows
+    if platform.system() == "Windows":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
     asyncio.run(main())
