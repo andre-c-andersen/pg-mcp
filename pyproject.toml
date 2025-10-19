@@ -40,7 +40,7 @@ requires = [ "hatchling",]
 build-backend = "hatchling.build"
 
 [project.scripts]
-pg-mcp = "pg_mcp:main"
+pg-mcp = "pg_mcp.server:main"
 
 # [tool.pyright]
 # venvPath = "."
