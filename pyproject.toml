@@ -1,7 +1,7 @@
 [project]
 name = "pg-mcp"
 version = "0.2.0"
-description = "Postgres MCP Lite - A lightweight MCP server for PostgreSQL"
+description = "A lightweight, read-only-by-default PostgreSQL MCP server for data analysts and ETL developers"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
