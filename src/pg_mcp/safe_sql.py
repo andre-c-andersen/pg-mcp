@@ -529,14 +529,6 @@ class SafeSqlDriver(SqlDriver):
         "pg_postmaster_start_time",  # Shows server start time
         # Recovery Information Functions (safe ones)
         "pg_is_in_recovery",
-        # Hypopg functions
-        "hypopg_create_index",
-        "hypopg_reset",
-        "hypopg_relation_size",
-        "hypopg_list_indexes",
-        "hypopg_get_indexdef",
-        "hypopg_hide_index",
-        "hypopg_unhide_index",
         # XML Functions (read-only)
         "xml",
         "xmlcomment",
@@ -741,7 +733,6 @@ class SafeSqlDriver(SqlDriver):
 
     ALLOWED_EXTENSIONS: ClassVar[set[str]] = {
         # Core PostgreSQL extensions
-        "hypopg",
         "pg_stat_statements",
         "pg_trgm",
         "btree_gin",
