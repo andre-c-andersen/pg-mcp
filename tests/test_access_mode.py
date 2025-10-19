@@ -1,6 +1,5 @@
 import asyncio
 from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
@@ -8,16 +7,13 @@ import pytest
 from pg_mcp.safe_sql import SafeSqlDriver
 from pg_mcp.server import AccessMode
 from pg_mcp.server import get_sql_driver
-from pg_mcp.sql_driver import DbConnPool
 from pg_mcp.sql_driver import SqlDriver
 
 
 @pytest.fixture
 def mock_db_connection():
-    """Mock database connection pool."""
-    conn = MagicMock(spec=DbConnPool)
-    conn.is_valid = True
-    return conn
+    """Mock database connection URL."""
+    return "postgresql://user:password@localhost/test"
 
 
 @pytest.mark.parametrize(
@@ -27,14 +23,13 @@ def mock_db_connection():
         (AccessMode.RESTRICTED, SafeSqlDriver),
     ],
 )
-@pytest.mark.asyncio
-async def test_get_sql_driver_returns_correct_driver(access_mode, expected_driver_type, mock_db_connection):
+def test_get_sql_driver_returns_correct_driver(access_mode, expected_driver_type, mock_db_connection):
     """Test that get_sql_driver returns the correct driver type based on access mode."""
     with (
         patch("pg_mcp.server.current_access_mode", access_mode),
         patch("pg_mcp.server.connection_registry.get_connection", return_value=mock_db_connection),
     ):
-        driver = await get_sql_driver(conn_name="default")
+        driver = get_sql_driver(conn_name="default")
         assert isinstance(driver, expected_driver_type)
 
         # When in RESTRICTED mode, verify timeout is set
@@ -43,27 +38,25 @@ async def test_get_sql_driver_returns_correct_driver(access_mode, expected_drive
             assert driver.timeout == 30
 
 
-@pytest.mark.asyncio
-async def test_get_sql_driver_sets_timeout_in_restricted_mode(mock_db_connection):
+def test_get_sql_driver_sets_timeout_in_restricted_mode(mock_db_connection):
     """Test that get_sql_driver sets the timeout in restricted mode."""
     with (
         patch("pg_mcp.server.current_access_mode", AccessMode.RESTRICTED),
         patch("pg_mcp.server.connection_registry.get_connection", return_value=mock_db_connection),
     ):
-        driver = await get_sql_driver(conn_name="default")
+        driver = get_sql_driver(conn_name="default")
         assert isinstance(driver, SafeSqlDriver)
         assert driver.timeout == 30
         assert hasattr(driver, "sql_driver")
 
 
-@pytest.mark.asyncio
-async def test_get_sql_driver_in_unrestricted_mode_no_timeout(mock_db_connection):
+def test_get_sql_driver_in_unrestricted_mode_no_timeout(mock_db_connection):
     """Test that get_sql_driver in unrestricted mode is a regular SqlDriver."""
     with (
         patch("pg_mcp.server.current_access_mode", AccessMode.UNRESTRICTED),
         patch("pg_mcp.server.connection_registry.get_connection", return_value=mock_db_connection),
     ):
-        driver = await get_sql_driver(conn_name="default")
+        driver = get_sql_driver(conn_name="default")
         assert isinstance(driver, SqlDriver)
         assert not hasattr(driver, "timeout")
 

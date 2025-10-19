@@ -57,59 +57,14 @@ def obfuscate_password(text: str | None) -> str | None:
     return text
 
 
-class DbConnPool:
-    """Database connection manager that validates and stores connection URLs."""
-
-    def __init__(self, connection_url: str | None = None):
-        self.connection_url = connection_url
-        self._is_valid = False
-        self._last_error = None
-
-    def test_connection(self, connection_url: str | None = None) -> None:
-        """Test that the connection URL is valid by attempting to connect."""
-        url = connection_url or self.connection_url
-        self.connection_url = url
-
-        if not url:
-            self._is_valid = False
-            self._last_error = "Database connection URL not provided"
-            raise ValueError(self._last_error)
-
-        try:
-            # Test connection by opening, executing a simple query, and closing
-            with psycopg.connect(url, autocommit=False) as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute("SELECT 1")
-
-            self._is_valid = True
-            self._last_error = None
-        except Exception as e:
-            self._is_valid = False
-            self._last_error = str(e)
-            raise ValueError(f"Connection attempt failed: {obfuscate_password(str(e))}") from e
-
-    def close(self) -> None:
-        """No-op for compatibility. Connections are per-request, nothing to close."""
-        pass
-
-    @property
-    def is_valid(self) -> bool:
-        """Check if the connection URL is valid."""
-        return self._is_valid
-
-    @property
-    def last_error(self) -> str | None:
-        """Get the last error message."""
-        return self._last_error
-
-
 class ConnectionRegistry:
     """Registry for managing multiple database connections."""
 
     def __init__(self):
-        self.connections: dict[str, DbConnPool] = {}
         self._connection_urls: dict[str, str] = {}
         self._connection_descriptions: dict[str, str] = {}
+        self._connection_valid: dict[str, bool] = {}
+        self._connection_errors: dict[str, str | None] = {}
 
     def discover_connections(self) -> dict[str, str]:
         """
@@ -172,61 +127,57 @@ class ConnectionRegistry:
         self._connection_urls = discovered.copy()
         self._connection_descriptions = self.discover_descriptions()
 
-        # Create connection managers and test each database URL
+        # Test each database URL
         for conn_name, url in discovered.items():
-            conn_mgr = DbConnPool(url)
-            self.connections[conn_name] = conn_mgr
-
             try:
-                conn_mgr.test_connection()
+                # Test connection by opening, executing a simple query, and closing
+                with psycopg.connect(url, autocommit=False) as conn:
+                    with conn.cursor() as cursor:
+                        cursor.execute("SELECT 1")
+
+                self._connection_valid[conn_name] = True
+                self._connection_errors[conn_name] = None
                 logger.info(f"Successfully tested connection to '{conn_name}'")
             except Exception as e:
+                self._connection_valid[conn_name] = False
+                self._connection_errors[conn_name] = str(e)
                 error_msg = obfuscate_password(str(e))
                 logger.warning(f"Failed to connect to '{conn_name}': {error_msg}")
-                logger.warning(f"Connection '{conn_name}' failed: {error_msg}")
 
-    def get_connection(self, conn_name: str) -> DbConnPool:
+    def get_connection(self, conn_name: str) -> str:
         """
-        Get a connection pool by name.
+        Get a connection URL by name.
 
         Args:
             conn_name: Connection name (e.g., "default", "app", "etl")
 
         Returns:
-            DbConnPool instance
+            Connection URL string
 
         Raises:
             ValueError: If connection name doesn't exist
         """
-        if conn_name not in self.connections:
-            available = ", ".join(f"'{name}'" for name in sorted(self.connections.keys()))
+        if conn_name not in self._connection_urls:
+            available = ", ".join(f"'{name}'" for name in sorted(self._connection_urls.keys()))
             raise ValueError(f"Connection '{conn_name}' not found. Available connections: {available}")
 
-        pool = self.connections[conn_name]
-
         # Check if connection is valid
-        if not pool.is_valid:
-            error_msg = pool.last_error or "Unknown error"
+        if not self._connection_valid.get(conn_name, False):
+            error_msg = self._connection_errors.get(conn_name) or "Unknown error"
             raise ValueError(f"Connection '{conn_name}' is not available: {obfuscate_password(error_msg)}")
 
-        return pool
+        return self._connection_urls[conn_name]
 
     def close_all(self) -> None:
-        """Close all database connections."""
-        for conn_name, pool in self.connections.items():
-            logger.info(f"Closing connection '{conn_name}'...")
-            try:
-                pool.close()
-            except Exception as e:
-                logger.error(f"Error closing connection '{conn_name}': {e}")
-
-        self.connections.clear()
+        """Clear all database connection state."""
         self._connection_urls.clear()
         self._connection_descriptions.clear()
+        self._connection_valid.clear()
+        self._connection_errors.clear()
 
     def get_connection_names(self) -> list[str]:
         """Get list of all connection names."""
-        return list(self.connections.keys())
+        return list(self._connection_urls.keys())
 
     def get_connection_info(self) -> list[dict[str, str]]:
         """
@@ -236,7 +187,7 @@ class ConnectionRegistry:
             List of dicts with 'name' and optional 'description' for each connection
         """
         info = []
-        for conn_name in sorted(self.connections.keys()):
+        for conn_name in sorted(self._connection_urls.keys()):
             conn_info = {"name": conn_name}
             if conn_name in self._connection_descriptions:
                 conn_info["description"] = self._connection_descriptions[conn_name]
@@ -259,33 +210,28 @@ class SqlDriver:
         engine_url: str | None = None,
     ):
         """
-        Initialize with a PostgreSQL connection or pool.
+        Initialize with a PostgreSQL connection URL.
 
         Args:
-            conn: PostgreSQL connection object or pool
-            engine_url: Connection URL string as an alternative to providing a connection
+            conn: Connection URL string (for backward-compatible signature)
+            engine_url: Connection URL string as an alternative
         """
-        if conn:
-            self.conn = conn
-            # Check if this is a connection pool
-            self.is_pool = isinstance(conn, DbConnPool)
+        url = None
+        if isinstance(conn, str):
+            url = conn
         elif engine_url:
-            # Don't connect here since we need async connection
-            self.engine_url = engine_url
-            self.conn = None
-            self.is_pool = False
-        else:
-            raise ValueError("Either conn or engine_url must be provided")
+            url = engine_url
+
+        if not url:
+            raise ValueError("Either a connection URL (conn) or engine_url must be provided")
+
+        self.engine_url = url
 
     def connect(self):
-        if self.conn is not None:
-            return self.conn
-        if self.engine_url:
-            self.conn = DbConnPool(self.engine_url)
-            self.is_pool = True
-            return self.conn
-        else:
-            raise ValueError("Connection not established. Either conn or engine_url must be provided")
+        """Return the connection URL."""
+        if not self.engine_url:
+            raise ValueError("Connection URL not set")
+        return self.engine_url
 
     def execute_query(
         self,
@@ -304,16 +250,7 @@ class SqlDriver:
         Returns:
             List of RowResult objects or None on error
         """
-        if self.conn is None:
-            self.connect()
-            if self.conn is None:
-                raise ValueError("Connection not established")
-
-        # Get the connection URL from the DbConnPool
-        if not self.is_pool:
-            raise ValueError("SqlDriver must be initialized with a DbConnPool instance")
-
-        connection_url = self.conn.connection_url
+        connection_url = self.engine_url
         if not connection_url:
             raise ValueError("Connection URL not available")
 
