@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/andre-c-andersen/pg-mcp/main/assets/postgres-mcp-lite.png" alt="Postgres MCP Lite Logo" width="600"/>
+<img src="https://raw.githubusercontent.com/andre-c-andersen/pg-mcp/refs/heads/master/assets/postgres-mcp-lite.png" alt="Postgres MCP Lite Logo" width="600"/>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![PyPI - Version](https://img.shields.io/pypi/v/pg-mcp)](https://pypi.org/project/pg-mcp/)
