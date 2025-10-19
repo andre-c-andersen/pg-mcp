@@ -491,3 +491,8 @@ async def shutdown(sig=None):
 
     # Exit with appropriate status code
     sys.exit(128 + sig if sig is not None else 0)
+
+
+def run():
+    """Entry point for the CLI command."""
+    asyncio.run(main())
