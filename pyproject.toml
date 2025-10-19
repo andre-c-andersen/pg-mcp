@@ -27,7 +27,7 @@ classifiers = [
 
 [[project.authors]]
 name = "André C. Andersen"
-email = "andre@gnist.ai"
+email = "andre@andersen.im"
 
 [project.urls]
 Homepage = "https://github.com/andre-c-andersen/pg-mcp"
