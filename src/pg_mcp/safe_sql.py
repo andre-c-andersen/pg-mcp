@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import re
+import time
 from typing import Any
 from typing import ClassVar
 
@@ -973,7 +973,7 @@ class SafeSqlDriver(SqlDriver):
         except pglast.parser.ParseError as e:
             raise ValueError("Failed to parse SQL statement") from e
 
-    async def execute_query(
+    def execute_query(
         self,
         query: LiteralString,
         params: list[Any] | None = None,
@@ -984,25 +984,34 @@ class SafeSqlDriver(SqlDriver):
 
         # NOTE: Always force readonly=True in SafeSqlDriver regardless of what was passed
         if self.timeout:
+            start_time = time.time()
             try:
-                async with asyncio.timeout(self.timeout):
-                    return await self.sql_driver.execute_query(
-                        f"/* crystaldba */ {query}",
-                        params=params,
-                        force_readonly=True,
-                    )
-            except asyncio.TimeoutError as e:
-                logger.warning(f"Query execution timed out after {self.timeout} seconds: {query[:100]}...")
-                raise ValueError(
-                    f"Query execution timed out after {self.timeout} seconds in restricted mode. "
-                    "Consider simplifying your query or increasing the timeout."
-                ) from e
+                # Execute with timeout handled by psycopg's statement_timeout
+                # Note: We have to cast to LiteralString for type safety, but this is safe because
+                # query has already been validated by _validate()
+                timeout_query = f"SET LOCAL statement_timeout = {int(self.timeout * 1000)}; /* pg-mcp */ {query}"
+                result = self.sql_driver.execute_query(
+                    timeout_query,  # type: ignore[arg-type]
+                    params=params,
+                    force_readonly=True,
+                )
+                elapsed = time.time() - start_time
+                if elapsed > self.timeout:
+                    logger.warning(f"Query execution took {elapsed:.2f}s (timeout: {self.timeout}s): {query[:100]}...")
+                return result
             except Exception as e:
+                elapsed = time.time() - start_time
+                if "statement timeout" in str(e).lower() or elapsed >= self.timeout:
+                    logger.warning(f"Query execution timed out after {elapsed:.2f} seconds: {query[:100]}...")
+                    raise ValueError(
+                        f"Query execution timed out after {self.timeout} seconds in restricted mode. "
+                        "Consider simplifying your query or increasing the timeout."
+                    ) from e
                 logger.error(f"Error executing query: {e}")
                 raise
         else:
-            return await self.sql_driver.execute_query(
-                f"/* crystaldba */ {query}",
+            return self.sql_driver.execute_query(
+                f"/* pg-mcp */ {query}",
                 params=params,
                 force_readonly=True,
             )
@@ -1023,10 +1032,10 @@ class SafeSqlDriver(SqlDriver):
         )
 
     @staticmethod
-    async def execute_param_query(sql_driver: SqlDriver, query: LiteralString, params: list[Any] | None = None) -> list[SqlDriver.RowResult] | None:
+    def execute_param_query(sql_driver: SqlDriver, query: LiteralString, params: list[Any] | None = None) -> list[SqlDriver.RowResult] | None:
         """Execute a query after validating it is safe"""
         if params:
             query_params = SafeSqlDriver.param_sql_to_query(query, params)
-            return await sql_driver.execute_query(query_params)  # type: ignore
+            return sql_driver.execute_query(query_params)  # type: ignore
         else:
-            return await sql_driver.execute_query(query)
+            return sql_driver.execute_query(query)

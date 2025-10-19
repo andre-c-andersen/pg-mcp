@@ -577,7 +577,7 @@ class SqlBindParams:
             AND pg_stats.attname = {}
             """
 
-            result = await SafeSqlDriver.execute_param_query(
+            result = SafeSqlDriver.execute_param_query(
                 self.sql_driver,
                 query,
                 [table_name, column_name],

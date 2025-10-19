@@ -1,6 +1,5 @@
 """SQL driver adapter for PostgreSQL connections."""
 
-import asyncio
 import logging
 import os
 import re
@@ -10,7 +9,7 @@ from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
 from psycopg.rows import dict_row
-from psycopg_pool import AsyncConnectionPool
+from psycopg_pool import ConnectionPool
 from typing_extensions import LiteralString
 
 logger = logging.getLogger(__name__)
@@ -63,11 +62,11 @@ class DbConnPool:
 
     def __init__(self, connection_url: str | None = None):
         self.connection_url = connection_url
-        self.pool: AsyncConnectionPool | None = None
+        self.pool: ConnectionPool | None = None
         self._is_valid = False
         self._last_error = None
 
-    async def pool_connect(self, connection_url: str | None = None) -> AsyncConnectionPool:
+    def pool_connect(self, connection_url: str | None = None) -> ConnectionPool:
         """Initialize connection pool with retry logic."""
         # If we already have a valid pool, return it
         if self.pool and self._is_valid:
@@ -81,11 +80,11 @@ class DbConnPool:
             raise ValueError(self._last_error)
 
         # Close any existing pool before creating a new one
-        await self.close()
+        self.close()
 
         try:
             # Configure connection pool with appropriate settings
-            self.pool = AsyncConnectionPool(
+            self.pool = ConnectionPool(
                 conninfo=url,
                 min_size=1,
                 max_size=5,
@@ -93,12 +92,12 @@ class DbConnPool:
             )
 
             # Open the pool explicitly
-            await self.pool.open()
+            self.pool.open()
 
             # Test the connection pool by executing a simple query
-            async with self.pool.connection() as conn:
-                async with conn.cursor() as cursor:
-                    await cursor.execute("SELECT 1")
+            with self.pool.connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT 1")
 
             self._is_valid = True
             self._last_error = None
@@ -108,16 +107,16 @@ class DbConnPool:
             self._last_error = str(e)
 
             # Clean up failed pool
-            await self.close()
+            self.close()
 
             raise ValueError(f"Connection attempt failed: {obfuscate_password(str(e))}") from e
 
-    async def close(self) -> None:
+    def close(self) -> None:
         """Close the connection pool."""
         if self.pool:
             try:
                 # Close the pool
-                await self.pool.close()
+                self.pool.close()
             except Exception as e:
                 logger.warning(f"Error closing connection pool: {e}")
             finally:
@@ -189,10 +188,9 @@ class ConnectionRegistry:
 
         return descriptions
 
-    async def discover_and_connect(self) -> None:
+    def discover_and_connect(self) -> None:
         """
         Discover all DATABASE_URI_* environment variables and connect to them.
-        Connections are initialized in parallel for efficiency.
         """
         discovered = self.discover_connections()
 
@@ -205,30 +203,18 @@ class ConnectionRegistry:
         self._connection_urls = discovered.copy()
         self._connection_descriptions = self.discover_descriptions()
 
-        # Create connection pools
+        # Create connection pools and connect to each database
         for conn_name, url in discovered.items():
-            self.connections[conn_name] = DbConnPool(url)
+            pool = DbConnPool(url)
+            self.connections[conn_name] = pool
 
-        # Connect to all databases in parallel
-        async def connect_single(conn_name: str, pool: DbConnPool) -> tuple[str, bool, str | None]:
-            """Connect to a single database and return status."""
             try:
-                await pool.pool_connect()
-                return (conn_name, True, None)
+                pool.pool_connect()
+                logger.info(f"Successfully connected to '{conn_name}'")
             except Exception as e:
                 error_msg = obfuscate_password(str(e))
                 logger.warning(f"Failed to connect to '{conn_name}': {error_msg}")
-                return (conn_name, False, error_msg)
-
-        # Execute all connections in parallel
-        results = await asyncio.gather(*[connect_single(name, pool) for name, pool in self.connections.items()], return_exceptions=False)
-
-        # Log results
-        for conn_name, success, error in results:
-            if success:
-                logger.info(f"Successfully connected to '{conn_name}'")
-            else:
-                logger.warning(f"Connection '{conn_name}' failed: {error}")
+                logger.warning(f"Connection '{conn_name}' failed: {error_msg}")
 
     def get_connection(self, conn_name: str) -> DbConnPool:
         """
@@ -256,15 +242,14 @@ class ConnectionRegistry:
 
         return pool
 
-    async def close_all(self) -> None:
+    def close_all(self) -> None:
         """Close all database connections."""
-        close_tasks = []
         for conn_name, pool in self.connections.items():
             logger.info(f"Closing connection '{conn_name}'...")
-            close_tasks.append(pool.close())
-
-        # Close all connections in parallel
-        await asyncio.gather(*close_tasks, return_exceptions=True)
+            try:
+                pool.close()
+            except Exception as e:
+                logger.error(f"Error closing connection '{conn_name}': {e}")
 
         self.connections.clear()
         self._connection_urls.clear()
@@ -333,7 +318,7 @@ class SqlDriver:
         else:
             raise ValueError("Connection not established. Either conn or engine_url must be provided")
 
-    async def execute_query(
+    def execute_query(
         self,
         query: LiteralString,
         params: list[Any] | None = None,
@@ -358,27 +343,27 @@ class SqlDriver:
         # Handle connection pool vs direct connection
         if self.is_pool:
             # For pools, get a connection from the pool
-            pool = await self.conn.pool_connect()
-            async with pool.connection() as connection:
-                return await self._execute_with_connection(connection, query, params, force_readonly=force_readonly)
+            pool = self.conn.pool_connect()
+            with pool.connection() as connection:
+                return self._execute_with_connection(connection, query, params, force_readonly=force_readonly)
         else:
             # Direct connection approach
-            return await self._execute_with_connection(self.conn, query, params, force_readonly=force_readonly)
+            return self._execute_with_connection(self.conn, query, params, force_readonly=force_readonly)
 
-    async def _execute_with_connection(self, connection, query, params, force_readonly) -> list[RowResult] | None:
+    def _execute_with_connection(self, connection, query, params, force_readonly) -> list[RowResult] | None:
         """Execute query with the given connection."""
         transaction_started = False
         try:
-            async with connection.cursor(row_factory=dict_row) as cursor:
+            with connection.cursor(row_factory=dict_row) as cursor:
                 # Start read-only transaction
                 if force_readonly:
-                    await cursor.execute("BEGIN TRANSACTION READ ONLY")
+                    cursor.execute("BEGIN TRANSACTION READ ONLY")
                     transaction_started = True
 
                 if params:
-                    await cursor.execute(query, params)
+                    cursor.execute(query, params)
                 else:
-                    await cursor.execute(query)
+                    cursor.execute(query)
 
                 # For multiple statements, move to the last statement's results
                 while cursor.nextset():
@@ -386,20 +371,20 @@ class SqlDriver:
 
                 if cursor.description is None:  # No results (like DDL statements)
                     if not force_readonly:
-                        await cursor.execute("COMMIT")
+                        cursor.execute("COMMIT")
                     elif transaction_started:
-                        await cursor.execute("ROLLBACK")
+                        cursor.execute("ROLLBACK")
                         transaction_started = False
                     return None
 
                 # Get results from the last statement only
-                rows = await cursor.fetchall()
+                rows = cursor.fetchall()
 
                 # End the transaction appropriately
                 if not force_readonly:
-                    await cursor.execute("COMMIT")
+                    cursor.execute("COMMIT")
                 elif transaction_started:
-                    await cursor.execute("ROLLBACK")
+                    cursor.execute("ROLLBACK")
                     transaction_started = False
 
                 return [SqlDriver.RowResult(cells=dict(row)) for row in rows]
@@ -408,7 +393,7 @@ class SqlDriver:
             # Try to roll back the transaction if it's still active
             if transaction_started:
                 try:
-                    await connection.rollback()
+                    connection.rollback()
                 except Exception as rollback_error:
                     logger.error(f"Error rolling back transaction: {rollback_error}")
 
