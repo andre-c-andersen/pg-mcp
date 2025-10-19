@@ -18,6 +18,12 @@ from pg_mcp import SafeSqlDriver
 from pg_mcp import SqlDriver
 from pg_mcp import obfuscate_password
 
+# Fix for Windows: psycopg3 requires SelectorEventLoop on Windows
+# This MUST be set before any async operations occur
+if platform.system() == "Windows":
+    # WindowsSelectorEventLoopPolicy is only available on Windows
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # type: ignore[attr-defined]
+
 
 def setup_logging(transport: str = "stdio") -> None:
     """
@@ -496,8 +502,4 @@ async def shutdown(sig=None):
 
 def run():
     """Entry point for the CLI command."""
-    # Fix for Windows: psycopg3 requires SelectorEventLoop on Windows
-    if platform.system() == "Windows":
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
     asyncio.run(main())

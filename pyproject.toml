@@ -1,6 +1,6 @@
 [project]
 name = "pg-mcp"
-version = "0.1.7"
+version = "0.1.8"
 description = "Postgres MCP Lite - A lightweight MCP server for PostgreSQL"
 readme = "README.md"
 requires-python = ">=3.12"
