@@ -284,7 +284,7 @@ class SqlBindParams:
         self.sql_driver = sql_driver
         self._column_stats_cache = {}
 
-    async def replace_parameters(self, query: str) -> str:
+    def replace_parameters(self, query: str) -> str:
         """Replace parameter placeholders with appropriate values based on column statistics.
 
         This handles queries from pg_stat_statements where literals
@@ -351,7 +351,7 @@ class SqlBindParams:
                 lower_bound = 10
                 upper_bound = 100
                 if table_name and col_name:
-                    stats = await self._get_column_statistics(table_name, col_name)
+                    stats = self._get_column_statistics(table_name, col_name)
                     if stats:
                         # Get appropriate values for both bounds
                         lower_bound = self._get_bound_values(stats, is_lower=True)
@@ -396,7 +396,7 @@ class SqlBindParams:
                 column_info = self._identify_parameter_column(preceding_text, table_columns)
                 if column_info:
                     table_name, column_name = column_info
-                    stats = await self._get_column_statistics(table_name, column_name)
+                    stats = self._get_column_statistics(table_name, column_name)
                     if stats:
                         replacement = self._get_replacement_value(stats, preceding_text)
                     else:
@@ -549,7 +549,7 @@ class SqlBindParams:
 
         return None
 
-    async def _get_column_statistics(self, table_name: str, column_name: str) -> dict[str, Any] | None:
+    def _get_column_statistics(self, table_name: str, column_name: str) -> dict[str, Any] | None:
         """Get statistics for a column from pg_stats."""
         # Create a cache key from table and column name
         cache_key = f"{table_name}.{column_name}"
