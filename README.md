@@ -367,6 +367,19 @@ The instructions below are for developers who want to work on Postgres MCP Lite,
    ```
 
 4. **Run the server**:
+
+   Using environment variables (recommended):
    ```bash
-   uv run pg-mcp "postgres://user:password@localhost:5432/dbname"
+   export DATABASE_URI=postgresql://user:password@localhost:5432/dbname
+   uv run pg-mcp
+   ```
+
+   Or using a positional argument (shorthand for default database):
+   ```bash
+   uv run pg-mcp postgresql://user:password@localhost:5432/dbname
+   ```
+
+   For multiple databases using command-line arguments:
+   ```bash
+   uv run pg-mcp --db prod=postgresql://... --db staging=postgresql://...
    ```

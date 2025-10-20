@@ -105,3 +105,49 @@ async def test_command_line_parsing():
         # Restore original values
         sys.argv = original_argv
         asyncio.run = original_run
+
+
+@pytest.mark.asyncio
+async def test_command_line_parsing_with_multiple_db_args():
+    """Test that --db arguments correctly set multiple database connections."""
+    import os
+    import sys
+
+    from pg_mcp.server import main
+
+    # Mock sys.argv
+    original_argv = sys.argv
+    original_env = os.environ.copy()
+
+    try:
+        # Test with multiple --db arguments
+        sys.argv = [
+            "pg_mcp",
+            "--db=prod=postgresql://user:password@prod-host/db",
+            "--db=staging=postgresql://user:password@staging-host/db",
+            "--access-mode=restricted",
+        ]
+
+        with (
+            patch("pg_mcp.server.connection_registry.discover_and_connect", AsyncMock()),
+            patch("pg_mcp.server.mcp.run", AsyncMock()),
+        ):
+            # Run main (partially mocked to avoid actual connection)
+            try:
+                main()
+            except Exception:
+                pass
+
+            # Verify environment variables were set
+            assert os.environ.get("DATABASE_URI_PROD") == "postgresql://user:password@prod-host/db"
+            assert os.environ.get("DATABASE_URI_STAGING") == "postgresql://user:password@staging-host/db"
+
+    finally:
+        # Restore original values
+        sys.argv = original_argv
+        # Clean up environment variables
+        for key in ["DATABASE_URI_PROD", "DATABASE_URI_STAGING"]:
+            os.environ.pop(key, None)
+        # Restore original environment
+        os.environ.clear()
+        os.environ.update(original_env)

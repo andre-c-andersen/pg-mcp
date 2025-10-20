@@ -2,6 +2,7 @@
 import argparse
 import logging
 import os
+import re
 import signal
 import sys
 from enum import StrEnum
@@ -399,7 +400,17 @@ def execute_sql(
 def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="PostgreSQL MCP Server")
-    parser.add_argument("database_url", help="Database connection URL", nargs="?")
+    parser.add_argument(
+        "database_url",
+        nargs="?",
+        help="Default database connection URL (shorthand for --db default=URL)",
+    )
+    parser.add_argument(
+        "--db",
+        action="append",
+        metavar="NAME=URL",
+        help="Database connection (can be repeated): --db prod=postgresql://... --db staging=postgresql://...",
+    )
     parser.add_argument(
         "--access-mode",
         type=str,
@@ -433,6 +444,35 @@ def main():
     # For stdio transport, logs go to stderr to avoid interfering with MCP protocol
     setup_logging(transport=args.transport)
 
+    # Process positional database_url argument (maps to default database)
+    # Standard precedence: environment variables > command-line arguments
+    if args.database_url and "DATABASE_URI" not in os.environ:
+        os.environ["DATABASE_URI"] = args.database_url
+        logger.info("Set default database connection from positional argument")
+
+    # Process --db arguments (only if not already set in environment)
+    if args.db:
+        for db_spec in args.db:
+            if "=" not in db_spec:
+                logger.error(f"Invalid --db format: '{db_spec}'. Expected NAME=URL")
+                sys.exit(1)
+
+            name, url = db_spec.split("=", 1)
+            name = name.strip().upper()
+
+            # Validate name contains only alphanumeric and underscore
+            if not re.match(r"^[A-Z0-9_]+$", name):
+                logger.error(f"Invalid connection name '{name}'. Only alphanumeric characters and underscores allowed.")
+                sys.exit(1)
+
+            # Check if already set in environment (env vars take precedence)
+            env_var = f"DATABASE_URI_{name}" if name != "DEFAULT" else "DATABASE_URI"
+            if env_var in os.environ:
+                logger.info(f"Skipping --db {name}=... (already set via {env_var} environment variable)")
+            else:
+                os.environ[env_var] = url
+                logger.info(f"Set database connection '{name.lower()}' from command-line argument")
+
     # Store the access mode in the global variable
     global current_access_mode
     current_access_mode = AccessMode(args.access_mode)
@@ -444,12 +484,6 @@ def main():
         mcp.add_tool(execute_sql, description="Execute a read-only SQL query")
 
     logger.info(f"Starting PostgreSQL MCP Server in {current_access_mode.upper()} mode")
-
-    # Initialize database connection registry
-    # For backwards compatibility, support command-line database_url argument
-    if args.database_url and "DATABASE_URI" not in os.environ:
-        os.environ["DATABASE_URI"] = args.database_url
-        logger.info("Using command-line database URL as DATABASE_URI")
 
     try:
         connection_registry.discover_and_connect()
