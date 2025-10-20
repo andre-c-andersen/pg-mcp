@@ -4,7 +4,7 @@ import logging
 import os
 import signal
 import sys
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 import mcp.types as types
@@ -15,6 +15,8 @@ from pg_mcp import ConnectionRegistry
 from pg_mcp import SafeSqlDriver
 from pg_mcp import SqlDriver
 from pg_mcp import obfuscate_password
+from pg_mcp.env_utils import discover_database_connections
+from pg_mcp.env_utils import discover_database_descriptions
 
 
 def setup_logging(transport: str = "stdio") -> None:
@@ -60,17 +62,44 @@ def setup_logging(transport: str = "stdio") -> None:
         force=True,  # Override any existing configuration
     )
 
+INSTRUCTIONS_TEMPLATE = """\
+This PostgreSQL MCP Lite server gives (un)restricted DB access via one or more connection strings.
 
-# Initialize FastMCP with default settings
-# Note: Server instructions will be updated after database connections are discovered
-mcp = FastMCP("postgres-mcp")
+Available database connections:
+{conn_list}
+"""
+
+
+def build_instructions() -> str:
+    """Build server instructions including available connections."""
+    # Discover connections from environment variables
+    conn_urls = discover_database_connections()
+    conn_descs = discover_database_descriptions()
+
+    # Build connection list
+    if not conn_urls:
+        conn_list = "- No connections configured (set DATABASE_URI environment variable)"
+    else:
+        conn_items = []
+        for name in sorted(conn_urls.keys()):
+            desc = conn_descs.get(name, "")
+            if desc:
+                conn_items.append(f"- '{name}': {desc}")
+            else:
+                conn_items.append(f"- '{name}'")
+        conn_list = "\n".join(conn_items)
+
+    instructions = INSTRUCTIONS_TEMPLATE.format(conn_list=conn_list)
+    return instructions
+
+mcp = FastMCP("pg-mcp", instructions=build_instructions())
 
 ResponseType = list[types.TextContent | types.ImageContent | types.EmbeddedResource]
 
 logger = logging.getLogger(__name__)
 
 
-class AccessMode(str, Enum):
+class AccessMode(StrEnum):
     """SQL access modes for the server."""
 
     UNRESTRICTED = "unrestricted"  # Unrestricted access

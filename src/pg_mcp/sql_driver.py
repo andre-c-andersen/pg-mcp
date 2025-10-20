@@ -1,7 +1,6 @@
 """SQL driver adapter for PostgreSQL connections."""
 
 import logging
-import os
 import re
 from dataclasses import dataclass
 from typing import Any
@@ -11,6 +10,9 @@ from urllib.parse import urlunparse
 import psycopg
 from psycopg.rows import dict_row
 from typing_extensions import LiteralString
+
+from .env_utils import discover_database_connections
+from .env_utils import discover_database_descriptions
 
 logger = logging.getLogger(__name__)
 
@@ -76,18 +78,7 @@ class ConnectionRegistry:
             - DATABASE_URI_STAGE_EXAMPLE -> "stage_example"
             - DATABASE_URI_DEV_EXAMPLE -> "dev_example"
         """
-        discovered = {}
-
-        for env_var, url in os.environ.items():
-            if env_var == "DATABASE_URI":
-                discovered["default"] = url
-            elif env_var.startswith("DATABASE_URI_"):
-                # Extract postfix and lowercase it
-                postfix = env_var[len("DATABASE_URI_") :]
-                conn_name = postfix.lower()
-                discovered[conn_name] = url
-
-        return discovered
+        return discover_database_connections()
 
     def discover_descriptions(self) -> dict[str, str]:
         """
@@ -99,18 +90,7 @@ class ConnectionRegistry:
             - DATABASE_DESC_STAGE_EXAMPLE -> "stage_example"
             - DATABASE_DESC_DEV_EXAMPLE -> "dev_example"
         """
-        descriptions = {}
-
-        for env_var, desc in os.environ.items():
-            if env_var == "DATABASE_DESC":
-                descriptions["default"] = desc
-            elif env_var.startswith("DATABASE_DESC_"):
-                # Extract postfix and lowercase it
-                postfix = env_var[len("DATABASE_DESC_") :]
-                conn_name = postfix.lower()
-                descriptions[conn_name] = desc
-
-        return descriptions
+        return discover_database_descriptions()
 
     def discover_and_connect(self) -> None:
         """
