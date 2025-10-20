@@ -98,11 +98,11 @@ def test_discover_and_connect_success(mock_psycopg_connect):
     with patch.dict(os.environ, env, clear=True):
         registry.discover_and_connect()
 
-    assert "default" in registry._connection_urls
-    assert registry._connection_urls["default"] == "postgresql://localhost/test"
-    assert registry._connection_valid["default"] is True
-    assert registry._connection_errors["default"] is None
-    assert registry._connection_descriptions["default"] == "Test database"
+    assert "default" in registry._connection_urls  # type: ignore[reportPrivateUsage]
+    assert registry._connection_urls["default"] == "postgresql://localhost/test"  # type: ignore[reportPrivateUsage]
+    assert registry._connection_valid["default"] is True  # type: ignore[reportPrivateUsage]
+    assert registry._connection_errors["default"] is None  # type: ignore[reportPrivateUsage]
+    assert registry._connection_descriptions["default"] == "Test database"  # type: ignore[reportPrivateUsage]
 
     # Verify psycopg.connect was called
     mock_psycopg_connect.assert_called_once_with("postgresql://localhost/test", autocommit=False)
@@ -120,9 +120,9 @@ def test_discover_and_connect_failure(mock_psycopg_connect):
     with patch.dict(os.environ, env, clear=True):
         registry.discover_and_connect()
 
-    assert "default" in registry._connection_urls
-    assert registry._connection_valid["default"] is False
-    assert "Connection refused" in registry._connection_errors["default"]
+    assert "default" in registry._connection_urls  # type: ignore[reportPrivateUsage]
+    assert registry._connection_valid["default"] is False  # type: ignore[reportPrivateUsage]
+    assert "Connection refused" in str(registry._connection_errors["default"])  # type: ignore[reportPrivateUsage]
 
 
 def test_discover_and_connect_no_connections():
@@ -150,7 +150,7 @@ def test_get_connection_success(mock_psycopg_connect):
 def test_get_connection_not_found():
     """Test getting a connection that doesn't exist."""
     registry = ConnectionRegistry()
-    registry._connection_urls = {"default": "postgresql://localhost/test"}
+    registry._connection_urls = {"default": "postgresql://localhost/test"}  # type: ignore[reportPrivateUsage]
 
     with pytest.raises(ValueError, match="Connection 'nonexistent' not found"):
         registry.get_connection("nonexistent")
@@ -175,23 +175,23 @@ def test_get_connection_invalid(mock_psycopg_connect):
 def test_close_all():
     """Test closing all connections."""
     registry = ConnectionRegistry()
-    registry._connection_urls = {"default": "postgresql://localhost/test"}
-    registry._connection_valid = {"default": True}
-    registry._connection_errors = {"default": None}
-    registry._connection_descriptions = {"default": "Test"}
+    registry._connection_urls = {"default": "postgresql://localhost/test"}  # type: ignore[reportPrivateUsage]
+    registry._connection_valid = {"default": True}  # type: ignore[reportPrivateUsage]
+    registry._connection_errors = {"default": None}  # type: ignore[reportPrivateUsage]
+    registry._connection_descriptions = {"default": "Test"}  # type: ignore[reportPrivateUsage]
 
     registry.close_all()
 
-    assert len(registry._connection_urls) == 0
-    assert len(registry._connection_valid) == 0
-    assert len(registry._connection_errors) == 0
-    assert len(registry._connection_descriptions) == 0
+    assert len(registry._connection_urls) == 0  # type: ignore[reportPrivateUsage]
+    assert len(registry._connection_valid) == 0  # type: ignore[reportPrivateUsage]
+    assert len(registry._connection_errors) == 0  # type: ignore[reportPrivateUsage]
+    assert len(registry._connection_descriptions) == 0  # type: ignore[reportPrivateUsage]
 
 
 def test_get_connection_names():
     """Test getting all connection names."""
     registry = ConnectionRegistry()
-    registry._connection_urls = {
+    registry._connection_urls = {  # type: ignore[reportPrivateUsage]
         "default": "postgresql://localhost/test1",
         "app": "postgresql://localhost/test2",
     }
@@ -203,11 +203,11 @@ def test_get_connection_names():
 def test_get_connection_info():
     """Test getting connection information."""
     registry = ConnectionRegistry()
-    registry._connection_urls = {
+    registry._connection_urls = {  # type: ignore[reportPrivateUsage]
         "default": "postgresql://localhost/test1",
         "app": "postgresql://localhost/test2",
     }
-    registry._connection_descriptions = {
+    registry._connection_descriptions = {  # type: ignore[reportPrivateUsage]
         "default": "Main database",
     }
 

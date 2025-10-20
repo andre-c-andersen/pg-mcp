@@ -94,7 +94,7 @@ async def test_command_line_parsing():
 
             # Run main (partially mocked to avoid actual connection)
             try:
-                await main()
+                main()
             except Exception:
                 pass
 
