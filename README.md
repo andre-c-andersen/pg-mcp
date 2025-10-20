@@ -291,10 +291,10 @@ Ask:
 Ask:
 > Write a query to find all orders from the past month with their customer details.
 
-### Analyze Table Structure
+### Understand Data Relationships
 
 Ask:
-> What indexes exist on the orders table and what columns do they cover?
+> What columns link the orders and customers tables? Show me a sample join query.
 
 ### Execute Data Queries
 
