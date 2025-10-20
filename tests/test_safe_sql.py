@@ -21,13 +21,11 @@ def safe_driver(mock_sql_driver):
     return SafeSqlDriver(mock_sql_driver)
 
 
-
 def test_select_statement(safe_driver, mock_sql_driver):
     """Test that simple SELECT statements are allowed"""
     query = "SELECT * FROM users WHERE age > 18"
     safe_driver.execute_query(query)
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
-
 
 
 def test_update_statement(safe_driver):
@@ -38,7 +36,6 @@ def test_update_statement(safe_driver):
         match="Error validating query",
     ):
         safe_driver.execute_query(query)
-
 
 
 def test_select_with_join(safe_driver, mock_sql_driver):
@@ -53,13 +50,11 @@ def test_select_with_join(safe_driver, mock_sql_driver):
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
 
 
-
 def test_show_variable(safe_driver, mock_sql_driver):
     """Test that SHOW statements are allowed"""
     query = "SHOW search_path"
     safe_driver.execute_query(query)
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
-
 
 
 def test_set_variable(safe_driver):
@@ -72,7 +67,6 @@ def test_set_variable(safe_driver):
         safe_driver.execute_query(query)
 
 
-
 def test_select_with_arithmetic(safe_driver, mock_sql_driver):
     """Test that SELECT with arithmetic expressions is allowed"""
     query = "SELECT id, price * quantity as total FROM orders"
@@ -80,13 +74,11 @@ def test_select_with_arithmetic(safe_driver, mock_sql_driver):
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
 
 
-
 def test_select_current_user(safe_driver, mock_sql_driver):
     """Test that SELECT current_user is allowed"""
     query = "SELECT current_user"
     safe_driver.execute_query(query)
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
-
 
 
 def test_drop_table(safe_driver):
@@ -99,7 +91,6 @@ def test_drop_table(safe_driver):
         safe_driver.execute_query(query)
 
 
-
 def test_delete_from_table(safe_driver):
     """Test that DELETE FROM statements are blocked"""
     query = "DELETE FROM users WHERE status = 'inactive'"
@@ -110,7 +101,6 @@ def test_delete_from_table(safe_driver):
         safe_driver.execute_query(query)
 
 
-
 def test_select_with_subquery(safe_driver, mock_sql_driver):
     """Test that SELECT with subqueries is allowed"""
     query = """
@@ -119,7 +109,6 @@ def test_select_with_subquery(safe_driver, mock_sql_driver):
     """
     safe_driver.execute_query(query)
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
-
 
 
 def test_select_with_malicious_comment(safe_driver):
@@ -134,7 +123,6 @@ def test_select_with_malicious_comment(safe_driver):
         safe_driver.execute_query(query)
 
 
-
 def test_select_with_union(safe_driver, mock_sql_driver):
     """Test that UNION queries are allowed"""
     query = """
@@ -144,7 +132,6 @@ def test_select_with_union(safe_driver, mock_sql_driver):
     """
     safe_driver.execute_query(query)
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
-
 
 
 def test_select_into(safe_driver):
@@ -158,7 +145,6 @@ def test_select_into(safe_driver):
         safe_driver.execute_query(query)
 
 
-
 def test_select_for_update(safe_driver):
     """Test that SELECT FOR UPDATE statements are blocked"""
     query = """
@@ -170,7 +156,6 @@ def test_select_for_update(safe_driver):
         safe_driver.execute_query(query)
 
 
-
 def test_select_with_locking_clause(safe_driver):
     """Test that SELECT with explicit locking clauses is blocked"""
     query = """
@@ -180,7 +165,6 @@ def test_select_with_locking_clause(safe_driver):
     """
     with pytest.raises(ValueError, match="Error validating query"):
         safe_driver.execute_query(query)
-
 
 
 def test_select_with_commit(safe_driver):
@@ -197,7 +181,6 @@ def test_select_with_commit(safe_driver):
         safe_driver.execute_query(query)
 
 
-
 def test_explain_plan(safe_driver, mock_sql_driver):
     """Test that EXPLAIN (without ANALYZE) works with bind variables"""
     query = """
@@ -210,7 +193,6 @@ def test_explain_plan(safe_driver, mock_sql_driver):
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
 
 
-
 def test_explain_analyze_blocked(safe_driver):
     """Test that EXPLAIN ANALYZE is blocked"""
     query = """
@@ -219,7 +201,6 @@ def test_explain_analyze_blocked(safe_driver):
     """
     with pytest.raises(ValueError, match="Error validating query"):
         safe_driver.execute_query(query)
-
 
 
 def test_begin_transaction_blocked(safe_driver):
@@ -233,7 +214,6 @@ def test_begin_transaction_blocked(safe_driver):
         match="Error validating query",
     ):
         safe_driver.execute_query(query)
-
 
 
 def test_invalid_sql_syntax(safe_driver):
@@ -251,7 +231,6 @@ def test_invalid_sql_syntax(safe_driver):
         safe_driver.execute_query(query3)
 
 
-
 def test_create_index_blocked(safe_driver):
     """Test that CREATE INDEX statements are blocked"""
     query = """
@@ -264,7 +243,6 @@ def test_create_index_blocked(safe_driver):
         safe_driver.execute_query(query)
 
 
-
 def test_drop_index_blocked(safe_driver):
     """Test that DROP INDEX statements are blocked"""
     query = """
@@ -275,7 +253,6 @@ def test_drop_index_blocked(safe_driver):
         match="Error validating query",
     ):
         safe_driver.execute_query(query)
-
 
 
 def test_create_table_blocked(safe_driver):
@@ -294,7 +271,6 @@ def test_create_table_blocked(safe_driver):
         safe_driver.execute_query(query)
 
 
-
 def test_create_table_as_blocked(safe_driver):
     """Test that CREATE TABLE AS statements are blocked"""
     query = """
@@ -308,7 +284,6 @@ def test_create_table_as_blocked(safe_driver):
         safe_driver.execute_query(query)
 
 
-
 def test_create_extension_blocked(safe_driver):
     """Test that CREATE EXTENSION statements are blocked"""
     query = """
@@ -316,7 +291,6 @@ def test_create_extension_blocked(safe_driver):
     """
     with pytest.raises(ValueError, match="Error validating query"):
         safe_driver.execute_query(query)
-
 
 
 def test_drop_extension_blocked(safe_driver):
@@ -329,7 +303,6 @@ def test_drop_extension_blocked(safe_driver):
         match="Error validating query",
     ):
         safe_driver.execute_query(query)
-
 
 
 def test_complex_index_metadata_select(safe_driver, mock_sql_driver):
@@ -346,14 +319,12 @@ def test_complex_index_metadata_select(safe_driver, mock_sql_driver):
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
 
 
-
 def test_allowed_functions(safe_driver):
     """Tests that allow functions (especially the ones that are newly added)"""
     query = """
     SELECT pg_relation_filenode('foo');
     """
     safe_driver.execute_query(query)
-
 
 
 def test_disallowed_functions(safe_driver):
@@ -369,13 +340,11 @@ def test_disallowed_functions(safe_driver):
             safe_driver.execute_query(query)
 
 
-
 def test_session_info_functions(safe_driver, mock_sql_driver):
     """Test that session info functions are allowed"""
     query = "SELECT current_user, current_database(), version()"
     safe_driver.execute_query(query)
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
-
 
 
 def test_blocking_pids_functions(safe_driver, mock_sql_driver):
@@ -385,13 +354,11 @@ def test_blocking_pids_functions(safe_driver, mock_sql_driver):
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
 
 
-
 def test_logfile_functions(safe_driver, mock_sql_driver):
     """Test that logfile functions are allowed"""
     query = "SELECT pg_current_logfile()"
     safe_driver.execute_query(query)
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
-
 
 
 def test_complex_session_info_queries(safe_driver, mock_sql_driver):
@@ -404,13 +371,11 @@ def test_complex_session_info_queries(safe_driver, mock_sql_driver):
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
 
 
-
 def test_security_privilege_functions(safe_driver, mock_sql_driver):
     """Test that security privilege functions are allowed"""
     query = "SELECT has_table_privilege('user', 'table', 'SELECT')"
     safe_driver.execute_query(query)
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
-
 
 
 def test_complex_security_privilege_queries(safe_driver, mock_sql_driver):
@@ -447,7 +412,6 @@ def test_complex_security_privilege_queries(safe_driver, mock_sql_driver):
         mock_sql_driver.execute_query.assert_called_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
 
 
-
 def test_security_privilege_functions_with_subqueries(safe_driver, mock_sql_driver):
     """Test security privilege functions used within subqueries"""
     queries = [
@@ -477,7 +441,6 @@ def test_security_privilege_functions_with_subqueries(safe_driver, mock_sql_driv
 
 
 @pytest.mark.parametrize("operator", ["LIKE", "ILIKE"])
-
 def test_like_patterns(safe_driver, mock_sql_driver, operator):
     """Test that LIKE/ILIKE patterns are only allowed if they start or end with %, but not both or in middle"""
     queries = [
@@ -491,7 +454,6 @@ def test_like_patterns(safe_driver, mock_sql_driver, operator):
     for query in queries:
         safe_driver.execute_query(query)
         mock_sql_driver.execute_query.assert_called_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
-
 
 
 def test_datetime_functions(safe_driver, mock_sql_driver):
@@ -527,7 +489,6 @@ def test_datetime_functions(safe_driver, mock_sql_driver):
         mock_sql_driver.execute_query.assert_called_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
 
 
-
 def test_type_conversion_functions(safe_driver, mock_sql_driver):
     """Test that type conversion functions are allowed"""
     queries = [
@@ -554,13 +515,11 @@ def test_type_conversion_functions(safe_driver, mock_sql_driver):
         mock_sql_driver.execute_query.assert_called_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
 
 
-
 def test_regexp_functions(safe_driver, mock_sql_driver):
     """Test that regexp functions are allowed"""
     query = "SELECT regexp_replace('Hello World', 'World', 'PostgreSQL')"
     safe_driver.execute_query(query)
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
-
 
 
 def test_complex_type_conversion_queries(safe_driver, mock_sql_driver):
@@ -575,13 +534,11 @@ def test_complex_type_conversion_queries(safe_driver, mock_sql_driver):
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
 
 
-
 def test_network_functions(safe_driver, mock_sql_driver):
     """Test that network functions are allowed"""
     query = "SELECT inet_client_addr(), inet_client_port()"
     safe_driver.execute_query(query)
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
-
 
 
 def test_network_functions_in_complex_queries(safe_driver, mock_sql_driver):
@@ -596,13 +553,11 @@ def test_network_functions_in_complex_queries(safe_driver, mock_sql_driver):
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
 
 
-
 def test_notification_and_server_functions(safe_driver, mock_sql_driver):
     """Test that notification and server functions are allowed"""
     query = "SELECT pg_listening_channels(), pg_postmaster_start_time()"
     safe_driver.execute_query(query)
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
-
 
 
 def test_minmax_expressions(safe_driver, mock_sql_driver):
@@ -612,13 +567,11 @@ def test_minmax_expressions(safe_driver, mock_sql_driver):
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
 
 
-
 def test_row_expressions(safe_driver, mock_sql_driver):
     """Test that row expressions are allowed"""
     query = "SELECT ROW(1, 2, 3) = ROW(1, 2, 3)"
     safe_driver.execute_query(query)
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
-
 
 
 def test_extension_check_query(safe_driver, mock_sql_driver):
@@ -628,13 +581,11 @@ def test_extension_check_query(safe_driver, mock_sql_driver):
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
 
 
-
 def test_create_extension_query(safe_driver, mock_sql_driver):
     """Test that CREATE EXTENSION queries are blocked"""
     query = "CREATE EXTENSION IF NOT EXISTS hypopg"
     with pytest.raises(ValueError, match="Error validating query"):
         safe_driver.execute_query(query)
-
 
 
 def test_hypopg_create_index_query(safe_driver, mock_sql_driver):
@@ -644,13 +595,11 @@ def test_hypopg_create_index_query(safe_driver, mock_sql_driver):
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
 
 
-
 def test_hypopg_reset_query(safe_driver, mock_sql_driver):
     """Test that hypopg reset queries are allowed"""
     query = "SELECT * FROM hypopg_reset()"
     safe_driver.execute_query(query)
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
-
 
 
 def test_hypopg_list_indexes_query(safe_driver, mock_sql_driver):
@@ -660,13 +609,11 @@ def test_hypopg_list_indexes_query(safe_driver, mock_sql_driver):
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
 
 
-
 def test_pg_stat_statements_query(safe_driver, mock_sql_driver):
     """Test that pg_stat_statements queries are allowed"""
     query = "SELECT * FROM pg_stat_statements ORDER BY calls DESC LIMIT 10"
     safe_driver.execute_query(query)
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
-
 
 
 def test_pg_indexes_query(safe_driver, mock_sql_driver):
@@ -676,7 +623,6 @@ def test_pg_indexes_query(safe_driver, mock_sql_driver):
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
 
 
-
 def test_pg_stats_query(safe_driver, mock_sql_driver):
     """Test that pg_stats queries are allowed"""
     query = "SELECT * FROM pg_stats WHERE schemaname = 'public'"
@@ -684,13 +630,11 @@ def test_pg_stats_query(safe_driver, mock_sql_driver):
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
 
 
-
 def test_explain_query(safe_driver, mock_sql_driver):
     """Test that explain queries are allowed"""
     query = "EXPLAIN SELECT * FROM users"
     safe_driver.execute_query(query)
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
-
 
 
 def test_sql_driver_parameter_format(safe_driver, mock_sql_driver):
@@ -714,7 +658,6 @@ def test_sql_driver_parameter_format(safe_driver, mock_sql_driver):
     mock_sql_driver.execute_query.assert_called_with("/* pg-mcp */ " + formatted_query, params=None, force_readonly=True)
 
 
-
 def test_multiple_queries(safe_driver, mock_sql_driver):
     """Test that multiple queries are handled correctly"""
     query1 = "SELECT * FROM users"
@@ -729,7 +672,6 @@ def test_multiple_queries(safe_driver, mock_sql_driver):
     )
 
 
-
 def test_query_with_comments(safe_driver, mock_sql_driver):
     """Test that queries with comments are handled correctly"""
     query = """
@@ -741,7 +683,6 @@ def test_query_with_comments(safe_driver, mock_sql_driver):
     """
     safe_driver.execute_query(query)
     mock_sql_driver.execute_query.assert_called_once_with("/* pg-mcp */ " + query, params=None, force_readonly=True)
-
 
 
 def test_query_with_whitespace(safe_driver, mock_sql_driver):

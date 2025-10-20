@@ -1,8 +1,6 @@
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
-import pytest
-
 from pg_mcp import SafeSqlDriver
 from pg_mcp import SqlDriver
 from pg_mcp.server import AccessMode

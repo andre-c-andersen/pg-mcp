@@ -181,5 +181,3 @@ def check_extension(
                     )
 
     return result
-
-

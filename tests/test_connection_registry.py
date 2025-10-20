@@ -1,6 +1,8 @@
 """Tests for ConnectionRegistry."""
+
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
 

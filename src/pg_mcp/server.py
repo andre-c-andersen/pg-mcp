@@ -62,6 +62,7 @@ def setup_logging(transport: str = "stdio") -> None:
         force=True,  # Override any existing configuration
     )
 
+
 INSTRUCTIONS_TEMPLATE = """\
 This PostgreSQL MCP Lite server gives (un)restricted DB access via one or more connection strings.
 
@@ -91,6 +92,7 @@ def build_instructions() -> str:
 
     instructions = INSTRUCTIONS_TEMPLATE.format(conn_list=conn_list)
     return instructions
+
 
 mcp = FastMCP("pg-mcp", instructions=build_instructions())
 
