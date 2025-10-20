@@ -88,7 +88,7 @@ def get_sql_driver(conn_name: str) -> SqlDriver | SafeSqlDriver:
     Get the appropriate SQL driver based on the current access mode.
 
     Args:
-        conn_name: Connection name (e.g., "default", "app", "etl")
+        conn_name: Connection name - see server instructions for available connections
 
     Returns:
         SqlDriver or SafeSqlDriver instance

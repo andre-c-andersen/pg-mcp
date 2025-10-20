@@ -128,12 +128,10 @@ To configure multiple connections, define additional environment variables with 
     "postgres": {
       "command": "pg-mcp",
       "env": {
-        "DATABASE_URI_APP": "postgresql://user:pass@localhost:5432/app_db",
-        "DATABASE_URI_ETL": "postgresql://user:pass@localhost:5432/etl_db",
-        "DATABASE_URI_ANALYTICS": "postgresql://user:pass@localhost:5432/analytics_db",
-        "DATABASE_DESC_APP": "Main application database with user data and transactions",
-        "DATABASE_DESC_ETL": "ETL staging database for data processing pipelines",
-        "DATABASE_DESC_ANALYTICS": "Read-only analytics database with aggregated metrics"
+        "DATABASE_URI_STAGE_EXAMPLE": "postgresql://user:pass@localhost:5432/stage_db",
+        "DATABASE_URI_DEV_EXAMPLE": "postgresql://user:pass@localhost:5432/dev_db",
+        "DATABASE_DESC_STAGE_EXAMPLE": "Staging database for testing",
+        "DATABASE_DESC_DEV_EXAMPLE": "Development database for local work"
       }
     }
   }
@@ -141,17 +139,16 @@ To configure multiple connections, define additional environment variables with 
 ```
 
 Each connection is identified by its name (the part after `DATABASE_URI_`, converted to lowercase):
-- `DATABASE_URI_APP` → connection name: `"app"`
-- `DATABASE_URI_ETL` → connection name: `"etl"`
-- `DATABASE_URI_ANALYTICS` → connection name: `"analytics"`
+- `DATABASE_URI_STAGE_EX` → connection name: `"stage_ex"`
+- `DATABASE_URI_DEV_EX` → connection name: `"dev_ex"`
 
 **Connection Descriptions**: You can optionally provide descriptions for each connection using `DATABASE_DESC_<NAME>` environment variables. These descriptions help the AI assistant understand which database to use for different tasks. The descriptions are:
 - Automatically displayed in the server context (visible to the AI without requiring a tool call)
 - Useful for guiding the AI to select the appropriate database
 
 When using tools, the LLM will specify which connection to use via the `conn_name` parameter:
-- `list_schemas(conn_name="app")` - Lists schemas in the app database
-- `explain_query(conn_name="etl", sql="SELECT ...")` - Explains query in the ETL database
+- `list_schemas(conn_name="stage_example")` - Lists schemas in the staging database
+- `execute_sql(conn_name="dev_example", sql="SELECT ...")` - Executes query in the development database
 
 For backward compatibility, `DATABASE_URI` (without a suffix) maps to the connection name `"default"`.
 
@@ -322,14 +319,6 @@ Postgres MCP Lite provides 4 essential tools:
 | `get_object_details` | Provides detailed information about a specific database object, including columns, constraints, and indexes. |
 | `execute_sql` | Executes SQL statements on the database, with read-only limitations when connected in restricted mode. |
 
-
-## Related Projects
-
-**Other Postgres MCP Servers**
-- [Reference PostgreSQL MCP Server](https://github.com/modelcontextprotocol/servers/tree/main/src/postgres) - Official reference implementation
-- [PG-MCP](https://github.com/stuzero/pg-mcp-server) - Feature-rich PostgreSQL MCP server
-- [Supabase Postgres MCP Server](https://github.com/supabase-community/supabase-mcp) - Supabase integration
-- [Query MCP](https://github.com/alexander-zuev/supabase-mcp-server) - Three-tier safety architecture
 
 ## Technical Notes
 

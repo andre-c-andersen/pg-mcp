@@ -73,8 +73,8 @@ class ConnectionRegistry:
         Returns:
             Dict mapping connection names to connection URLs
             - DATABASE_URI -> "default"
-            - DATABASE_URI_APP -> "app"
-            - DATABASE_URI_ETL -> "etl"
+            - DATABASE_URI_STAGE_EXAMPLE -> "stage_example"
+            - DATABASE_URI_DEV_EXAMPLE -> "dev_example"
         """
         discovered = {}
 
@@ -96,8 +96,8 @@ class ConnectionRegistry:
         Returns:
             Dict mapping connection names to descriptions
             - DATABASE_DESC -> "default"
-            - DATABASE_DESC_APP -> "app"
-            - DATABASE_DESC_ETL -> "etl"
+            - DATABASE_DESC_STAGE_EXAMPLE -> "stage_example"
+            - DATABASE_DESC_DEV_EXAMPLE -> "dev_example"
         """
         descriptions = {}
 
@@ -149,7 +149,7 @@ class ConnectionRegistry:
         Get a connection URL by name.
 
         Args:
-            conn_name: Connection name (e.g., "default", "app", "etl")
+            conn_name: Connection name
 
         Returns:
             Connection URL string

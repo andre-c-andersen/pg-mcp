@@ -40,8 +40,8 @@ def test_discover_connections_multiple():
 
     env = {
         "DATABASE_URI": "postgresql://localhost/default",
-        "DATABASE_URI_APP": "postgresql://localhost/app",
-        "DATABASE_URI_ETL": "postgresql://localhost/etl",
+        "DATABASE_URI_STAGE_EXAMPLE": "postgresql://localhost/stage_example",
+        "DATABASE_URI_DEV_EXAMPLE": "postgresql://localhost/dev_example",
     }
 
     with patch.dict(os.environ, env, clear=True):
@@ -49,8 +49,8 @@ def test_discover_connections_multiple():
 
     assert connections == {
         "default": "postgresql://localhost/default",
-        "app": "postgresql://localhost/app",
-        "etl": "postgresql://localhost/etl",
+        "stage_example": "postgresql://localhost/stage_example",
+        "dev_example": "postgresql://localhost/dev_example",
     }
 
 
@@ -70,8 +70,8 @@ def test_discover_descriptions():
 
     env = {
         "DATABASE_DESC": "Main database",
-        "DATABASE_DESC_APP": "Application database",
-        "DATABASE_DESC_ETL": "ETL database",
+        "DATABASE_DESC_STAGE_EXAMPLE": "Staging database example",
+        "DATABASE_DESC_DEV_EXAMPLE": "Development database example",
     }
 
     with patch.dict(os.environ, env, clear=True):
@@ -79,8 +79,8 @@ def test_discover_descriptions():
 
     assert descriptions == {
         "default": "Main database",
-        "app": "Application database",
-        "etl": "ETL database",
+        "stage_example": "Staging database example",
+        "dev_example": "Development database example",
     }
 
 
