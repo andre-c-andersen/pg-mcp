@@ -101,7 +101,6 @@ class SafeSqlDriver(SqlDriver):
     ALLOWED_STMT_TYPES: ClassVar[set[type]] = {
         SelectStmt,  # Regular SELECT
         ExplainStmt,  # EXPLAIN SELECT
-        CreateExtensionStmt,  # CREATE EXTENSION
         VariableShowStmt,  # SHOW statements
         VacuumStmt,  # VACUUM and ANALYZE statements
         PrepareStmt,  # PREPARE statement (for prepared queries)
@@ -116,6 +115,7 @@ class SafeSqlDriver(SqlDriver):
         # ListenStmt,  # LISTEN (notification system)
         # UnlistenStmt,  # UNLISTEN (notification system)
         # VariableSetStmt,  # SET (for session variables - will be validated)
+        # Note: CreateExtensionStmt is NOT allowed in restricted mode for security reasons
     }
 
     ALLOWED_FUNCTIONS: ClassVar[set[str]] = {
@@ -899,10 +899,9 @@ class SafeSqlDriver(SqlDriver):
                 if isinstance(option, DefElem) and option.defname == "analyze":
                     raise ValueError("EXPLAIN ANALYZE is not supported")
 
-        # Reject CREATE EXTENSION statements
+        # Reject CREATE EXTENSION statements entirely in restricted mode
         if isinstance(node, CreateExtensionStmt):
-            if node.extname not in self.ALLOWED_EXTENSIONS:
-                raise ValueError(f"CREATE EXTENSION {node.extname} is not supported")
+            raise ValueError("CREATE EXTENSION is not supported in restricted mode")
 
         # Recursively validate all attributes that might be nodes
         for attr_name in node.__slots__:
