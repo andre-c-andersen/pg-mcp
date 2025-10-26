@@ -15,6 +15,7 @@ from pydantic import Field
 from pg_mcp import ConnectionRegistry
 from pg_mcp import SafeSqlDriver
 from pg_mcp import SqlDriver
+from pg_mcp import __version__
 from pg_mcp import obfuscate_password
 from pg_mcp.env_utils import discover_database_connections
 from pg_mcp.env_utils import discover_database_descriptions
@@ -400,6 +401,12 @@ def execute_sql(
 def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="PostgreSQL MCP Server")
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"pg-mcp {__version__}",
+        help="Show the version number and exit"
+    )
     parser.add_argument(
         "database_url",
         nargs="?",

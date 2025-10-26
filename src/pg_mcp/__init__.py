@@ -1,5 +1,13 @@
 """SQL utilities."""
 
+import importlib.metadata
+
+try:
+    __version__ = importlib.metadata.version("pg-mcp")
+except importlib.metadata.PackageNotFoundError:
+    # Package is not installed, try reading from pyproject.toml as fallback
+    __version__ = "unknown"
+
 from .bind_params import ColumnCollector
 from .bind_params import SqlBindParams
 from .bind_params import TableAliasVisitor
@@ -13,6 +21,7 @@ from .sql_driver import SqlDriver
 from .sql_driver import obfuscate_password
 
 __all__ = [
+    "__version__",
     "ColumnCollector",
     "ConnectionRegistry",
     "SafeSqlDriver",
